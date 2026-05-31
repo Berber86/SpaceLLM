@@ -4,7 +4,7 @@
 // - playCard возвращает { normalMsgs, chaosResult } для UI
 // - остальное без изменений
 
-import { isActionType, DIRECTIONAL_ACTIONS } from "./actions.js";
+import { isActionType, DIRECTIONAL_ACTIONS, getActionLabel } from "./actions.js";
 
 export const LIMITS = {
   DIST_MIN: 0,
@@ -22,8 +22,8 @@ export const LIMITS = {
 const BASE_PLAYER = { shield: 20, hull: 60 };
 
 const RARITY_MODULE_HP = {
-  bad: 15, common: 20, improved: 28,
-  quality: 38, elite: 52, perfect: 70,
+  bad: 8, common: 12, improved: 16,
+  quality: 22, elite: 30, perfect: 40,
 };
 
 const ENGINE_FATIGUE_PER_USE = 30;
@@ -36,7 +36,6 @@ const STEALTH_SCAN_CHANCE    = 0.33;
 // ─────────────────────────────────────────────────────────────
 // Distance damage multipliers
 // ─────────────────────────────────────────────────────────────
-
 export function distDamageMult(actionType, dist) {
   const d = clamp(dist, LIMITS.DIST_MIN, LIMITS.ESCAPE_DIST);
   const t = d / LIMITS.ESCAPE_DIST;
@@ -44,30 +43,24 @@ export function distDamageMult(actionType, dist) {
   switch (actionType) {
     case "ATTACK_KINETIC":
       return 1.4 - t * 0.8;
-
     case "PIERCE":
       return 1.5 - t * 1.0;
-
     case "FOCUS_FIRE":
       return 1.3 - t * 0.6;
-
     case "FUEL_IGNITE":
       return 1.4 - t * 1.0;
-
     case "ATTACK_THERMAL": {
       const peak = 0.40;
       const half = 0.55;
       const dev  = Math.abs(t - peak) / half;
-      return Math.max(0.7, 1.0 + 0.4 * Math.max(0, 1 - dev * dev));
+      return Math.max(0.7, 1.0 + 0.4  *Math.max(0, 1 - dev*  dev));
     }
-
     case "ATTACK_SHRAPNEL": {
       const peak = 0.50;
       const half = 0.55;
       const dev  = Math.abs(t - peak) / half;
-      return Math.max(0.7, 1.0 + 0.4 * Math.max(0, 1 - dev * dev));
+      return Math.max(0.7, 1.0 + 0.4  *Math.max(0, 1 - dev*  dev));
     }
-
     case "ROCKET_SALVO":
       return 0.5 + t * 1.1;
 
@@ -81,7 +74,6 @@ export function distDamageMult(actionType, dist) {
 // ─────────────────────────────────────────────────────────────
 // Base damage table
 // ─────────────────────────────────────────────────────────────
-
 const ENEMY_BASE_DAMAGE_TABLE = {
   //                    ×0.5  ×1.0  ×1.5  ×2.0  ×2.5  ×3.5
   minor_pirate:         [  4,    7,   10,   14,   19,   28],
@@ -90,20 +82,17 @@ const ENEMY_BASE_DAMAGE_TABLE = {
   pirate_pack:          [ 10,   17,   24,   32,   44,   65],
   berserker:            [ 12,   20,   28,   38,   52,   76],
 };
-
 const TIER_SCALE_INDEX = [0.5, 1.0, 1.5, 2.0, 2.5, 3.5];
 
 function baseDamageFromTier(enemyKey, tierScale) {
   const row = ENEMY_BASE_DAMAGE_TABLE[enemyKey] || ENEMY_BASE_DAMAGE_TABLE.minor_pirate;
   const ts  = clamp(Number(tierScale || 1), 0.5, 3.5);
-
   let lo = 0;
   for (let i = 0; i < TIER_SCALE_INDEX.length - 1; i++) {
     if (ts >= TIER_SCALE_INDEX[i]) lo = i;
   }
   const hi = Math.min(lo + 1, TIER_SCALE_INDEX.length - 1);
   if (lo === hi) return row[lo];
-
   const t = (ts - TIER_SCALE_INDEX[lo]) / (TIER_SCALE_INDEX[hi] - TIER_SCALE_INDEX[lo]);
   return Math.round(row[lo] + (row[hi] - row[lo]) * t);
 }
@@ -111,7 +100,6 @@ function baseDamageFromTier(enemyKey, tierScale) {
 // ─────────────────────────────────────────────────────────────
 // Enemies
 // ─────────────────────────────────────────────────────────────
-
 export const ENEMIES = [
   {
     key: "minor_pirate",
@@ -236,7 +224,6 @@ export function createEnemy(key, tierScale = 1.0) {
 
   const modulesCount = Math.max(1, Math.round(e.modulesCount ?? 2));
   const moduleHp     = Math.round((e.moduleHp ?? 18) * s);
-
   const modules = Array.from({ length: modulesCount }, (_, i) => ({
     id:        `enemy_mod_${i + 1}`,
     name:      `Секция ${i + 1}`,
@@ -262,7 +249,6 @@ export function createEnemy(key, tierScale = 1.0) {
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 function rPick(arr) { return (!Array.isArray(arr) || !arr.length) ? null : arr[Math.floor(Math.random() * arr.length)]; }
 function countDestroyed(mods) { return (mods || []).reduce((s, m) => s + (m?.destroyed ? 1 : 0), 0); }
@@ -299,8 +285,8 @@ function updateStealthLockAndMaybeEscape(state) {
                            "в пыльном облаке пояса";
 
   end(state, "win_stealth",
-    `👻 Контакт сорван: удержали маскировку ${LIMITS.STEALTH_LOCK_REQUIRED} раунда. ` +
-    `Dist=${Math.round(state.distance)}, stealth=${Math.round(state.stealth)}/${needed}. (${where})`
+    `👻 Контакт сорван: удержали маскировку ${LIMITS.STEALTH_LOCK_REQUIRED} раунда. `  +
+    `Дист.=${Math.round(state.distance)}, скрытность=${Math.round(state.stealth)}/${needed}. (${where})`
   );
   return true;
 }
@@ -315,7 +301,6 @@ function applyCloseRangeStealthDecay(state) {
 // ─────────────────────────────────────────────────────────────
 // Card helpers
 // ─────────────────────────────────────────────────────────────
-
 function markCooldown(card) { return { ...card, _cooldown: true }; }
 function isCooldown(card)   { return card?._cooldown === true; }
 
@@ -340,7 +325,6 @@ function cardBelongsToLiveModules(card, liveIds) {
 // ─────────────────────────────────────────────────────────────
 // Effects
 // ─────────────────────────────────────────────────────────────
-
 function effPower(item) {
   return item?.original ? 1.0 : clamp(Number(item?.echoPower ?? 0.6), 0, 1);
 }
@@ -392,7 +376,6 @@ export function mergeEffectsFromItems(items) {
 // ─────────────────────────────────────────────────────────────
 // Accuracy
 // ─────────────────────────────────────────────────────────────
-
 export function accuracyAtDist(dist, isPlayer) {
   const d = clamp(dist, 0, 100);
   if (d <= 19) return isPlayer ? 0.95 : 0.95;
@@ -405,11 +388,11 @@ export function accuracyAtDist(dist, isPlayer) {
 // ─────────────────────────────────────────────────────────────
 // SOCIAL
 // ─────────────────────────────────────────────────────────────
-
 function enemyHpPct(state) {
   const e = state.enemy;
   return (e.shield + e.hull) / Math.max(1, (e.maxShield + e.maxHull));
 }
+
 function playerModsDown(state) { return countDestroyed(state.player?.modules || []); }
 function enemyModsDown(state)  { return countDestroyed(state.enemy?.modules  || []); }
 
@@ -426,20 +409,20 @@ function weaponScore(state) {
 function threatHardwareBonus(state) {
   const det = clamp(Number(state.detonationRisk ?? 0), 0, 100);
   const w   = weaponScore(state);
-  return 1 + clamp((w - 1) * 0.55, 0, 1.25) + clamp(det / 100 * 0.35, 0, 0.35);
+  return 1 + clamp((w - 1)  *0.55, 0, 1.25) + clamp(det / 100*  0.35, 0, 0.35);
 }
 
 function bluffHardwareBonus(state) {
   const det = clamp(Number(state.detonationRisk ?? 0), 0, 100);
   const w   = weaponScore(state);
-  return 1 + clamp((w - 1) * 0.30, 0, 0.70) + clamp(det / 100 * 0.18, 0, 0.18);
+  return 1 + clamp((w - 1)  *0.30, 0, 0.70) + clamp(det / 100*  0.18, 0, 0.18);
 }
 
 function pleaScale(state) {
   const pDown   = playerModsDown(state);
   const eDown   = enemyModsDown(state);
   const hullPct = state.player.hull / Math.max(1, state.player.maxHull);
-  let s = 1 + 0.35 * pDown - 0.15 * eDown;
+  let s = 1 + 0.35  *pDown - 0.15*  eDown;
   if (hullPct < 0.35) s += 0.25;
   return clamp(s, 0.65, 2.35);
 }
@@ -447,7 +430,7 @@ function pleaScale(state) {
 function threatScale(state) {
   const pDown = playerModsDown(state);
   const eDown = enemyModsDown(state);
-  let s = 1 + 0.35 * eDown - 0.15 * pDown;
+  let s = 1 + 0.35  *eDown - 0.15*  pDown;
   s *= threatHardwareBonus(state);
   return clamp(s, 0.65, 3.25);
 }
@@ -464,14 +447,17 @@ export function previewSocialGain(state, actionType, basePts, track) {
   const tMult  = Number(e.socialTrackMult?.[track] ?? 1);
   const scale  = (track === "plea") ? pleaScale(state) : threatScale(state);
   const dMult  = desperateMult(state);
-  let raw = basePts * aMult * tMult * scale * dMult;
+
+  let raw = basePts  *aMult*  tMult  *scale*  dMult;
   if (actionType === "SIGNAL_BLUFF") raw *= bluffHardwareBonus(state);
+
   return Math.max(0.5, raw);
 }
 
 function applySocial(state, actionType, basePts, track, juicyLine = "") {
   if (!state.social) state.social = { plea: 0, threat: 0 };
   const gain = previewSocialGain(state, actionType, basePts, track);
+
   if (track === "plea") {
     state.social.plea   = Math.min(LIMITS.SOCIAL_PLEA_WIN   * 1.35, state.social.plea   + gain);
     state.social.threat = Math.max(0, state.social.threat - gain * 0.35);
@@ -479,25 +465,32 @@ function applySocial(state, actionType, basePts, track, juicyLine = "") {
     state.social.threat = Math.min(LIMITS.SOCIAL_THREAT_WIN * 1.35, state.social.threat + gain);
     state.social.plea   = Math.max(0, state.social.plea   - gain * 0.30);
   }
+
   const p = state.social.plea.toFixed(1);
   const t = state.social.threat.toFixed(1);
-  return `🗣 ${juicyLine} (+${gain.toFixed(1)} ${track === "plea" ? "plea" : "threat"}) → plea=${p}/${LIMITS.SOCIAL_PLEA_WIN}, threat=${t}/${LIMITS.SOCIAL_THREAT_WIN}`;
+
+  return `🗣 ${juicyLine} (+${gain.toFixed(1)} ${track === "plea" ? "plea" : "threat"}) → убежд.=${p}/${LIMITS.SOCIAL_PLEA_WIN}, угроза=${t}/${LIMITS.SOCIAL_THREAT_WIN}`;
 }
 
 function applySocialBluffMixed(state, basePts, juicyLine = "") {
   if (!state.social) state.social = { plea: 0, threat: 0 };
+
   const gainP = previewSocialGain(state, "SIGNAL_BLUFF", basePts * 0.60, "plea");
   const gainT = previewSocialGain(state, "SIGNAL_BLUFF", basePts * 0.40, "threat");
+
   state.social.plea   = Math.min(LIMITS.SOCIAL_PLEA_WIN   * 1.35, state.social.plea   + gainP);
   state.social.threat = Math.min(LIMITS.SOCIAL_THREAT_WIN * 1.35, state.social.threat + gainT);
   state.social.plea   = Math.max(0, state.social.plea - gainT * 0.10);
+
   const p = state.social.plea.toFixed(1);
   const t = state.social.threat.toFixed(1);
-  return `🗣 ${juicyLine} (+${gainP.toFixed(1)} plea, +${gainT.toFixed(1)} threat) → plea=${p}/${LIMITS.SOCIAL_PLEA_WIN}, threat=${t}/${LIMITS.SOCIAL_THREAT_WIN}`;
+
+  return `🗣 ${juicyLine} (+${gainP.toFixed(1)} plea, +${gainT.toFixed(1)} threat) → убежд.=${p}/${LIMITS.SOCIAL_PLEA_WIN}, угроза=${t}/${LIMITS.SOCIAL_THREAT_WIN}`;
 }
 
 function checkSocialWin(state) {
   if (!state.social) return false;
+
   if (state.social.plea >= LIMITS.SOCIAL_PLEA_WIN) {
     end(state, "win_social_plea", "🤲 Они купились на жалость/деньги. Контакт закрыт без выстрела.");
     return true;
@@ -512,7 +505,6 @@ function checkSocialWin(state) {
 // ─────────────────────────────────────────────────────────────
 // Damage model
 // ─────────────────────────────────────────────────────────────
-
 function moduleDamageShareAtDist(dist) {
   const d = clamp(dist, 0, 100);
   return clamp(0.35 + (1 - d / 100) * 0.35, 0.35, 0.70);
@@ -523,9 +515,11 @@ function purgeCardsByModuleId(state, id) {
   const deck0  = state.deck.length;
   const hand0  = state.hand.length;
   const disc0  = state.discard.length;
+
   state.deck    = state.deck.filter(c => !has(c));
   state.hand    = state.hand.filter(c => !has(c));
   state.discard = state.discard.filter(c => !has(c));
+
   return (deck0 - state.deck.length) + (hand0 - state.hand.length) + (disc0 - state.discard.length);
 }
 
@@ -548,8 +542,8 @@ function createFallbackSocialCard(state, reason = "") {
   const chaosTypes = ["NEGOTIATE_DELAY", "BROADCAST_PLEA", "SIGNAL_BLUFF", "OFFER_BRIBE", "DISTANCE_PUSH"];
   const chaosType  = chaosTypes[Math.floor(Math.random() * chaosTypes.length)];
   const chaosMult  = Math.random() < 0.5
-    ? Math.round((0.2 + Math.random() * 0.2) * 100) / 100
-    : Math.round((1.8 + Math.random() * 0.7) * 100) / 100;
+    ? Math.round((0.2 + Math.random()  *0.2)*  100) / 100
+    : Math.round((1.8 + Math.random()  *0.7)*  100) / 100;
 
   return {
     origin_key:       `SOCIAL_FALLBACK__${state._fallbackSeq}`,
@@ -574,25 +568,31 @@ function addFallbackSocialCards(state, count, reason = "") {
 
 function onPlayerModuleDestroyed(state, mod, reasonMsg = "") {
   state.log.push({
-    round: state.round, who: "system", title: "SYSTEM",
+    round: state.round, who: "system", title: "СИСТЕМА",
     messages: [`💥 Модуль уничтожен: ${mod.name}${reasonMsg ? ` (${reasonMsg})` : ""}`],
   });
+
   const removed = purgeCardsByModuleId(state, mod.id);
   addFallbackSocialCards(state, removed, mod.name);
+
   recomputePlayerCaps(state);
 }
 
 function applyDamageToPlayerModules(state, amount, messages) {
   let rem   = Math.max(0, Math.round(amount || 0));
   let dealt = 0;
+
   while (rem > 0) {
     const alive  = state.player.modules.filter(m => !m.destroyed);
     if (!alive.length) break;
+
     const target = alive[Math.floor(Math.random() * alive.length)];
     const hit    = Math.min(rem, target.hp);
+
     target.hp    = Math.max(0, target.hp - hit);
     rem   -= hit;
     dealt += hit;
+
     if (target.hp <= 0 && !target.destroyed) {
       target.destroyed = true;
       if (messages) messages.push(`⚙️ ${target.name}: −${hit}hp → 0/${target.maxHp} (уничтожен)`);
@@ -601,6 +601,7 @@ function applyDamageToPlayerModules(state, amount, messages) {
       if (messages) messages.push(`⚙️ ${target.name}: −${hit}hp → ${target.hp}/${target.maxHp}`);
     }
   }
+
   if (state.player.modules.every(m => m.destroyed)) end(state, "lose_modules");
   return dealt;
 }
@@ -609,19 +610,24 @@ function applyDamageToEnemyModules(state, amount, messages) {
   const e   = state.enemy;
   let rem   = Math.max(0, Math.round(amount || 0));
   let dealt = 0;
+
   while (rem > 0) {
     const alive  = e.modules.filter(m => !m.destroyed);
     if (!alive.length) break;
+
     const target = alive[Math.floor(Math.random() * alive.length)];
     const hit    = Math.min(rem, target.hp);
+
     target.hp    = Math.max(0, target.hp - hit);
     rem   -= hit;
     dealt += hit;
+
     if (target.hp <= 0 && !target.destroyed) {
       target.destroyed = true;
       if (messages) messages.push(`🔧 Враг теряет систему: ${target.name} (сломана)`);
     }
   }
+
   return dealt;
 }
 
@@ -650,6 +656,7 @@ function applyDamageToPlayer(state, amount) {
   }
 
   let hullDealt = 0;
+
   if (rem > 0) {
     const shareToModules = (state.player.hull <= 0) ? 1.0 : moduleDamageShareAtDist(state.distance);
     let toModules = Math.round(rem * shareToModules);
@@ -661,6 +668,7 @@ function applyDamageToPlayer(state, amount) {
       hullDealt += h;
       toHull    -= h;
       messages.push(`🧱 Корпус: −${h} → ${state.player.hull}/${state.player.maxHull}`);
+
       if (toHull > 0) toModules += toHull;
     } else if (toHull > 0) {
       toModules += toHull;
@@ -670,7 +678,7 @@ function applyDamageToPlayer(state, amount) {
       recomputePlayerCaps(state);
       const tank = (state.player._eff?.fuel_tank_mult ?? 1);
       state.detonationRisk = clamp(
-        state.detonationRisk + (hullDealt / Math.max(1, state.player.maxHull)) * 30 * tank,
+        state.detonationRisk + (hullDealt / Math.max(1, state.player.maxHull))  *30*  tank,
         0, 100
       );
     }
@@ -687,21 +695,22 @@ function applyDamageToPlayer(state, amount) {
 // ─────────────────────────────────────────────────────────────
 // Bribe / economy
 // ─────────────────────────────────────────────────────────────
-
 function bribeBaseCostCredits(state) {
   return Math.round(15_000 + (state.enemy.maxShield + state.enemy.maxHull) * 450);
 }
+
 function bribeCostCredits(state, mult) {
   const base     = bribeBaseCostCredits(state);
   const attempts = Number(state.economy?.bribeAttempts ?? 0);
   const m        = clamp(Number(mult ?? 1), 0.6, 2.5);
-  return Math.round(base * (1 + attempts * 0.35) * (0.85 + 0.25 * m));
+  return Math.round(base  *(1 + attempts*  0.35)  *(0.85 + 0.25*  m));
 }
 
 function applyBribe(state, mult) {
   if (!state.economy) state.economy = {
     credits: 0, cargoUnits: 0, spentCredits: 0, dumpedCargoUnits: 0, bribeAttempts: 0,
   };
+
   const cost = bribeCostCredits(state, mult);
   state.economy.bribeAttempts = (state.economy.bribeAttempts ?? 0) + 1;
 
@@ -719,7 +728,7 @@ function applyBribe(state, mult) {
   const payFactor       = clamp(paid / Math.max(1, cost), 0, 1);
   const cargoBonus      = dumped > 0 ? clamp(0.15 + Math.log10(1 + dumped) / 6, 0.15, 0.35) : 0;
   const effectiveFactor = clamp(0.20 + 0.70 * payFactor + cargoBonus, 0.20, 1.15);
-  const basePts         = 2.0 * mult * effectiveFactor;
+  const basePts         = 2.0  *mult*  effectiveFactor;
 
   if (paid > 0 || dumped > 0) {
     state.enemy.aggression = clamp((state.enemy.aggression ?? 0.7) - 0.06 * effectiveFactor, 0.25, 0.98);
@@ -738,13 +747,14 @@ function applyBribe(state, mult) {
 // ─────────────────────────────────────────────────────────────
 // State build
 // ─────────────────────────────────────────────────────────────
-
 export function buildCombatState({
   equippedItems,
   deckCards,
   enemyKey,
   playerCredits    = 0,
   playerCargoUnits = 0,
+  playerFuel = 0,
+  playerMaxFuel = 100,
   tierScale        = 1.0,
 } = {}) {
   const enemy = createEnemy(enemyKey, tierScale);
@@ -770,6 +780,8 @@ export function buildCombatState({
     economy: {
       credits:          Math.max(0, Math.round(Number(playerCredits    || 0))),
       cargoUnits:       Math.max(0, Math.round(Number(playerCargoUnits || 0))),
+      fuel: Math.max(0, Math.round(Number(playerFuel || 0))),
+      maxFuel: Math.max(1, Math.round(Number(playerMaxFuel || 100))),
       spentCredits:     0,
       dumpedCargoUnits: 0,
       bribeAttempts:    0,
@@ -777,6 +789,7 @@ export function buildCombatState({
     _fallbackSeq:  0,
     // последний chaos-результат для UI (не часть игровой логики)
     _lastChaos:    null,
+
     player: {
       shield: 0, maxShield: 0,
       hull:   0, maxHull:   0,
@@ -796,9 +809,9 @@ export function buildCombatState({
   state.player.hull   = state.player.maxHull;
 
   state.log.push({
-    round: 0, who: "system", title: "BALANCE",
+    round: 0, who: "system", title: "РАСКЛАД СИЛ",
     messages: [
-      `Враг: ${enemyKey} · tier ×${tierScale} → baseDamage = ${state.enemy.baseDamage}`,
+      `Враг: ${enemyKey} · уровень ×${tierScale} → баз. урон = ${state.enemy.baseDamage}`,
       `Игрок HP: щит ${state.player.maxShield} + корпус ${state.player.maxHull} = ${state.player.maxShield + state.player.maxHull}`,
     ],
   });
@@ -823,7 +836,6 @@ export function recomputePlayerCaps(state) {
 // ─────────────────────────────────────────────────────────────
 // Deck
 // ─────────────────────────────────────────────────────────────
-
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -847,7 +859,6 @@ export function drawHand(state) {
     let found = false;
     while (state.deck.length > 0) {
       const card = state.deck.shift();
-
       if (!cardBelongsToLiveModules(card, live)) {
         state.discard.push(card);
         continue;
@@ -856,7 +867,6 @@ export function drawHand(state) {
         state.discard.push({ ...card, _cooldown: false });
         continue;
       }
-
       state.hand.push(card);
       found = true;
       break;
@@ -868,7 +878,6 @@ export function drawHand(state) {
 // ─────────────────────────────────────────────────────────────
 // Play card
 // ─────────────────────────────────────────────────────────────
-
 /**
  * Разыгрывает карту.
  * Нормальные действия — сразу.
@@ -907,7 +916,6 @@ export function playCard(state, cardIndex, direction = null) {
   let chaosMsgText = null;
   if (chaosAction && !state.over) {
     chaosMsgText = resolvePlayerAction(state, chaosAction, null);
-
     // сохраняем для UI
     state._lastChaos = {
       type:        chaosAction.type,
@@ -922,7 +930,7 @@ export function playCard(state, cardIndex, direction = null) {
   // в лог: нормальные + chaos отдельной строкой
   const allMsgs = [...normalMsgs.filter(Boolean)];
   if (chaosMsgText) {
-    allMsgs.push(`⚡ CHAOS [${chaosAction.type} ×${Number(chaosAction.mult).toFixed(2)}]: ${chaosMsgText}`);
+    allMsgs.push(`⚡ CHAOS [${getActionLabel(chaosAction.type)} ×${Number(chaosAction.mult).toFixed(2)}]: ${chaosMsgText}`);
   }
 
   state.log.push({
@@ -937,7 +945,6 @@ export function playCard(state, cardIndex, direction = null) {
 // ─────────────────────────────────────────────────────────────
 // Engine fatigue
 // ─────────────────────────────────────────────────────────────
-
 function applyEngineFatigue(state) {
   const fatigue = clamp(state.engineFatigue ?? 0, 0, ENGINE_FATIGUE_MAX);
   const mult    = 1 - fatigue / 100;
@@ -948,7 +955,6 @@ function applyEngineFatigue(state) {
 // ─────────────────────────────────────────────────────────────
 // Social juice lines
 // ─────────────────────────────────────────────────────────────
-
 const SOCIAL_JUICE = {
   OFFER_BRIBE: [
     "Подкуп: «Слушай, без героизма. У меня тут цифры. Берёшь — и исчезаешь.»",
@@ -984,18 +990,18 @@ const SOCIAL_JUICE = {
 // ─────────────────────────────────────────────────────────────
 // Action resolver
 // ─────────────────────────────────────────────────────────────
-
 function resolvePlayerAction(state, action, direction = null) {
   const type = String(action?.type || "").trim();
   // chaos mult может выходить за стандартный диапазон
   const mult = clamp(Number(action?.mult ?? 1), 0.1, 3.0);
+
   if (!isActionType(type)) return `UNKNOWN_ACTION: ${type}`;
 
   recomputePlayerCaps(state);
   const eff       = state.player._eff || {};
   const accP      = () => accuracyAtDist(state.distance, true);
   const hitRoll   = (acc) => Math.random() <= clamp(acc, 0, 1);
-  const speedMult = () => clamp(eff.flight_speed_mult ?? 1, 0.15, 18.0);
+  const speedMult = () => Math.sqrt(clamp(eff.flight_speed_mult ?? 1, 0.5, 5.0));
   const dir       = direction === "toward" ? "toward" : "away";
 
   const dmgEnemyMixed = (amount, pierceRatio = 0) => {
@@ -1015,113 +1021,98 @@ function resolvePlayerAction(state, action, direction = null) {
   };
 
   switch (type) {
-
     // ── OFFENSE ─────────────────────────────────────────────
-
     case "ATTACK_KINETIC": {
-      const base = 9 * mult * (eff.kinetic_damage_mult ?? 1);
+      const base = 7 * mult *  (eff.kinetic_damage_mult ?? 1);
       if (!hitRoll(accP())) return "Кинетика: мимо. Только пыль по датчикам.";
       const { total, dm } = dmgWithDistMult(base, type);
       return `Кинетика: ${total} урона (dist×${dm.toFixed(2)}).`;
     }
-
     case "ATTACK_THERMAL": {
-      const base = 7 * mult * (eff.thermal_damage_mult ?? 1);
+      const base = 5 * mult *  (eff.thermal_damage_mult ?? 1);
       if (!hitRoll(accP())) return "Термик: мимо. Греем космос, молодцы.";
       const { total, dm } = dmgWithDistMult(base, type);
       const burnAdd = Math.max(0, (eff.thermal_burn_add ?? 0) + 2.5 * mult);
       state.enemy.burn = Math.min(30, state.enemy.burn + burnAdd);
       return `Термик: ${total} урона (dist×${dm.toFixed(2)}) + burn +${burnAdd.toFixed(1)}.`;
     }
-
     case "ATTACK_SHRAPNEL": {
-      const base = 6 * mult * (eff.rocket_salvo_mult ?? 1);
+      const base = 4 * mult *  (eff.rocket_salvo_mult ?? 1);
       const { total, dm } = dmgWithDistMult(base, type);
       return `Шрапнель: ${total} урона (dist×${dm.toFixed(2)}). Сектор залит мусором.`;
     }
-
     case "ROCKET_SALVO": {
-      const base = 14 * mult * (eff.rocket_salvo_mult ?? 1);
+      const base = 10 * mult *  (eff.rocket_salvo_mult ?? 1);
       const { total, dm } = dmgWithDistMult(base, type);
       const ammoBonus = Math.floor(eff.rocket_ammo_add ?? 0);
       if (ammoBonus > 0) {
-        const { total: bonus } = dmgWithDistMult(base * 0.4 * ammoBonus, type);
+        const { total: bonus } = dmgWithDistMult(base  *0.4*  ammoBonus, type);
         return `Ракетный залп: ${total} урона (dist×${dm.toFixed(2)}) + доп. ${bonus} (ammo).`;
       }
       return `Ракетный залп: ${total} урона (dist×${dm.toFixed(2)}).`;
     }
-
     case "ATTACK_EMP": {
       state.enemy.accuracyDebuffRounds = Math.max(state.enemy.accuracyDebuffRounds, 2);
       return "ЭМИ: враг слепнет на 2 раунда.";
     }
-
     case "PIERCE": {
-      const base = 6 * mult * (eff.armor_pierce_mult ?? 1);
+      const base = 5 * mult * (eff.armor_pierce_mult ?? 1);
       if (!hitRoll(accP())) return "Прокол: мимо.";
       const pierceRatio   = clamp(0.40 + ((eff.armor_pierce_mult ?? 1) - 1) * 0.20, 0.40, 0.85);
       const { total, dm } = dmgWithDistMult(base, type, pierceRatio);
       return `Пробитие: ${total} урона (dist×${dm.toFixed(2)}, ${Math.round(pierceRatio * 100)}% в hull).`;
     }
-
     case "FOCUS_FIRE": {
-      const base = 12 * mult * (eff.kinetic_damage_mult ?? 1);
+      const base = 9 * mult *  (eff.kinetic_damage_mult ?? 1);
       if (!hitRoll(accP() * 0.9)) return "Фокус: мимо.";
       const { total, dm } = dmgWithDistMult(base, type);
       return `Фокус: ${total} урона (dist×${dm.toFixed(2)}).`;
     }
-
     case "DISRUPT_SENSORS": {
       state.enemy.accuracyDebuffRounds = Math.max(state.enemy.accuracyDebuffRounds, 2);
       return "Помехи: наведение врага ест дерьмо (2 раунда).";
     }
-
     case "FUEL_IGNITE": {
-      const base = 5 * mult * (eff.thermal_damage_mult ?? 1);
+      const base = 5  *mult*  (eff.thermal_damage_mult ?? 1);
       if (!hitRoll(accP())) return "Поджог: мимо.";
       const { total, dm } = dmgWithDistMult(base, type);
       state.detonationRisk = clamp(state.detonationRisk + 10, 0, 100);
-      return `Поджог: ${total} урона (dist×${dm.toFixed(2)}), detonation +10%.`;
+      return `Поджог: ${total} урона (dist×${dm.toFixed(2)}), риск детонации +10%.`;
     }
 
     // ── DEFENSE ──────────────────────────────────────────────
-
     case "SHIELD_REGEN": {
-      const add = Math.round(15 * mult * (eff.shield_mult ?? 1));
+      const add = Math.round(15  *mult*  (eff.shield_mult ?? 1));
       state.player.shield = Math.min(state.player.maxShield, state.player.shield + add);
       return `Реген щита: +${add}.`;
     }
-
     case "SHIELD_SPIKE": {
-      const add = Math.round(25 * mult * (eff.shield_mult ?? 1));
+      const add = Math.round(25  *mult*  (eff.shield_mult ?? 1));
       state.player.shield = Math.min(state.player.maxShield + add, state.player.shield + add);
       return `Пик щита: +${add} (временно).`;
     }
-
     case "HULL_BRACE": {
       state.player.dmgReduction = Math.max(state.player.dmgReduction, 0.5);
       return "Корпус укреплён: следующий урон −50%.";
     }
-
     case "EMERGENCY_REPAIR": {
-      const add = Math.round(10 * mult * (eff.hp_mult ?? 1));
+      const add = Math.round(10  *mult*  (eff.hp_mult ?? 1));
       state.player.hull = Math.min(state.player.maxHull, state.player.hull + add);
       return `Аварийный ремонт: +${add} обшивки.`;
     }
-
     case "DAMAGE_CONTROL": {
-      const add = Math.round(6 * mult * (eff.hp_mult ?? 1));
+      const add = Math.round(6  *mult*  (eff.hp_mult ?? 1));
       state.player.hull = Math.min(state.player.maxHull, state.player.hull + add);
       state.detonationRisk = clamp(state.detonationRisk - 5, 0, 100);
-      return `Контроль урона: +${add} обшивки, detonation −5%.`;
+      return `Контроль урона: +${add} обшивки, риск детонации −5%.`;
     }
 
     // ── MANEUVER ─────────────────────────────────────────────
-
     case "DISTANCE_PUSH": {
       const fatMult  = applyEngineFatigue(state);
-      const delta    = Math.round(20 * mult * speedMult() * fatMult);
+      const delta    = Math.round(12 * mult *  speedMult() * fatMult);
       const fatigue  = Math.round(state.engineFatigue);
+
       if (dir === "toward") {
         state.distance = clamp(state.distance - delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
         return `Манёвр к врагу: −${delta} → dist=${Math.round(state.distance)} · уст.двиг ${fatigue}%`;
@@ -1129,21 +1120,20 @@ function resolvePlayerAction(state, action, direction = null) {
       state.distance = clamp(state.distance + delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       return `Манёвр от врага: +${delta} → dist=${Math.round(state.distance)} · уст.двиг ${fatigue}%`;
     }
-
     case "DISTANCE_PULL": {
       const fatMult  = applyEngineFatigue(state);
-      const pull     = Math.round(20 * mult * fatMult);
+      const pull     = Math.round(20 * mult * speedMult() * fatMult);
       state.distance = clamp(state.distance - pull, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const fatigue  = Math.round(state.engineFatigue);
       return `Сближение: −${pull} → dist=${Math.round(state.distance)} · уст.двиг ${fatigue}%`;
     }
-
     case "FULL_BURN": {
       const fatMult    = applyEngineFatigue(state);
-      const delta      = Math.round(35 * mult * speedMult() * fatMult);
-      const shieldCost = Math.round(5 / Math.max(0.3, speedMult()));
+      const delta      = Math.round(20 * mult *  speedMult() * fatMult);
+      const shieldCost = Math.round(10 / Math.max(0.5, speedMult()));
       state.player.shield = Math.max(0, state.player.shield - shieldCost);
       const fatigue = Math.round(state.engineFatigue);
+
       if (dir === "toward") {
         state.distance = clamp(state.distance - delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
         return `Форсаж к врагу: −${delta} → dist=${Math.round(state.distance)} (щит −${shieldCost}) · уст. ${fatigue}%`;
@@ -1151,31 +1141,31 @@ function resolvePlayerAction(state, action, direction = null) {
       state.distance = clamp(state.distance + delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       return `Форсаж прочь: +${delta} → dist=${Math.round(state.distance)} (щит −${shieldCost}) · уст. ${fatigue}%`;
     }
-
     case "DRIFT_SILENT": {
       const stealthMult = clamp(eff.guard_stealth_mult ?? 1, 0.25, 50.0);
       const cloakBonus  = 1 + (eff.cloak_duration_add ?? 0) / 10;
       const distB       = stealthDistBonus(state.distance);
-      const distDelta   = Math.round(10 * mult * speedMult());
+      const distDelta   = Math.round(6 * mult *  speedMult());
 
       if (dir === "toward") {
-        const stealthGain = 20 * mult * stealthMult * cloakBonus * distB * 1.3;
-        state.stealth   = clamp(state.stealth + stealthGain, 0, 100);
+        const stealthGain = 20  *mult*  stealthMult  *cloakBonus*  distB * 1.3;
+        state.stealth   = clamp(state.скрытность + stealthGain, 0, 100);
         state.distance  = clamp(state.distance - distDelta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
-        return `Тихий дрейф к врагу: stealth +${stealthGain.toFixed(0)} → ${state.stealth.toFixed(0)} (×1.3, lock заморожен), dist −${distDelta} → ${Math.round(state.distance)}.`;
+        return `Тихий дрейф к врагу: скрытность +${stealthGain.toFixed(0)} → ${state.stealth.toFixed(0)} (×1.3, фиксация заморожена), дист. −${distDelta} → ${Math.round(state.distance)}.`;
       }
-      const stealthGain = 20 * mult * stealthMult * cloakBonus * distB;
-      state.stealth   = clamp(state.stealth + stealthGain, 0, 100);
+
+      const stealthGain = 20  *mult*  stealthMult  *cloakBonus*  distB;
+      state.stealth   = clamp(state.скрытность + stealthGain, 0, 100);
       state.distance  = clamp(state.distance + distDelta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
+
       if (state.distance < LIMITS.ESCAPE_DIST) {
         const need = stealthThresholdAtDist(state.distance);
-        return `Тихий дрейф: stealth +${stealthGain.toFixed(0)} → ${state.stealth.toFixed(0)} (нужно ${need}), dist +${distDelta} → ${Math.round(state.distance)}.`;
+        return `Тихий дрейф: скрытность +${stealthGain.toFixed(0)} → ${state.stealth.toFixed(0)} (нужно ${need}), дист. +${distDelta} → ${Math.round(state.distance)}.`;
       }
-      return `Тихий дрейф: stealth +${stealthGain.toFixed(0)} → ${state.stealth.toFixed(0)}, dist +${distDelta} → ${Math.round(state.distance)}.`;
+      return `Тихий дрейф: скрытность +${stealthGain.toFixed(0)} → ${state.stealth.toFixed(0)}, дист. +${distDelta} → ${Math.round(state.distance)}.`;
     }
-
     case "EVADE_SPIKE": {
-      const e = (15 * mult * speedMult()) +
+      const e = (15  *mult*  speedMult()) +
         (eff.dodge_chance_add  ?? 0) * 0.25 +
         (eff.evade_charge_add  ?? 0) * 3;
       state.player.evasionPct = Math.max(state.player.evasionPct, clamp(e, 0, 85));
@@ -1183,93 +1173,88 @@ function resolvePlayerAction(state, action, direction = null) {
     }
 
     // ── TRICKS ───────────────────────────────────────────────
-
     case "SENSOR_JAM": {
-      const s = 25 * mult * (1 + (eff.sensor_jam_add ?? 0) / 50) * stealthDistBonus(state.distance);
-      state.stealth = clamp(state.stealth + s, 0, 100);
+      const s = 25  *mult*  (1 + (eff.sensor_jam_add ?? 0) / 50) * stealthDistBonus(state.distance);
+      state.stealth = clamp(state.скрытность + s, 0, 100);
       state.enemy.accuracyDebuffRounds = Math.max(state.enemy.accuracyDebuffRounds, 1);
       if (state.distance < LIMITS.ESCAPE_DIST) {
         const need = stealthThresholdAtDist(state.distance);
-        return `Глушилка: stealth +${s.toFixed(0)} → ${state.stealth.toFixed(0)} (нужно ${need}), враг хуже видит.`;
+        return `Глушилка: скрытность +${s.toFixed(0)} → ${state.stealth.toFixed(0)} (нужно ${need}), враг хуже видит.`;
       }
-      return `Глушилка: stealth +${s.toFixed(0)} → ${state.stealth.toFixed(0)}, враг хуже видит.`;
+      return `Глушилка: скрытность +${s.toFixed(0)} → ${state.stealth.toFixed(0)}, враг хуже видит.`;
     }
-
     case "DATA_SPOOF": {
-      const s = 15 * mult * stealthDistBonus(state.distance) * 0.9;
-      state.stealth = clamp(state.stealth + s, 0, 100);
-      return `Спуфинг: stealth +${s.toFixed(0)} → ${state.stealth.toFixed(0)}.`;
+      const s = 15  *mult*  stealthDistBonus(state.distance) * 0.9;
+      state.stealth = clamp(state.скрытность + s, 0, 100);
+      return `Спуфинг: скрытность +${s.toFixed(0)} → ${state.stealth.toFixed(0)}.`;
     }
-
     case "FAKE_MELTDOWN": {
       if (state.player.fakeMeltdownUsed) return "Ложная авария: враг уже не верит.";
       state.player.fakeMeltdownUsed = true;
       const juicy   = rPick(SOCIAL_JUICE.FAKE_MELTDOWN) || "Ложная авария.";
-      const basePts = 3.5 * mult * (1 + state.detonationRisk / 100);
+      const basePts = 3.5  *mult*  (1 + state.detonationRisk / 100);
       state.detonationRisk = clamp(state.detonationRisk + 6, 0, 100);
       return applySocial(state, "FAKE_MELTDOWN", basePts, "threat", juicy) +
-        ` · detonation ${Math.round(state.detonationRisk)}%`;
+         `· риск детонации ${Math.round(state.detonationRisk)}%`;
     }
-
     case "EMP_STUN": {
       state.enemy.stunned = true;
       return "ЭМИ-стан: враг пропускает ход.";
     }
-
     case "DECOY_DUMP": {
-      const s = (15 * mult + (eff.cloak_duration_add ?? 0) * 2) * stealthDistBonus(state.distance);
-      state.stealth = clamp(state.stealth + s, 0, 100);
+      const s = (15  *mult + (eff.cloak_duration_add ?? 0)*  2) * stealthDistBonus(state.distance);
+      state.stealth = clamp(state.скрытность + s, 0, 100);
       state.enemy.stunned = true;
       if (state.distance < LIMITS.ESCAPE_DIST) {
         const need = stealthThresholdAtDist(state.distance);
-        return `Приманки: stealth +${s.toFixed(0)} → ${state.stealth.toFixed(0)} (нужно ${need}), враг отвлечён.`;
+        return `Приманки: скрытность +${s.toFixed(0)} → ${state.stealth.toFixed(0)} (нужно ${need}), враг отвлечён.`;
       }
-      return `Приманки: stealth +${s.toFixed(0)} → ${state.stealth.toFixed(0)}, враг отвлечён.`;
+      return `Приманки: скрытность +${s.toFixed(0)} → ${state.stealth.toFixed(0)}, враг отвлечён.`;
     }
 
     // ── SOCIAL ───────────────────────────────────────────────
-
     case "OFFER_BRIBE":
       return applyBribe(state, mult);
-
     case "BROADCAST_PLEA": {
       const juicy = rPick(SOCIAL_JUICE.BROADCAST_PLEA) || "Мольба.";
       return applySocial(state, "BROADCAST_PLEA", 1.2 * mult, "plea", juicy);
     }
-
     case "NEGOTIATE_DELAY": {
       const juicy = rPick(SOCIAL_JUICE.NEGOTIATE_DELAY) || "Тянуть время.";
-      state.stealth = clamp(state.stealth + 4, 0, 100);
-      return applySocial(state, "NEGOTIATE_DELAY", 1.0 * mult, "plea", juicy) + " · stealth +4";
+      state.stealth = clamp(state.скрытность + 4, 0, 100);
+      return applySocial(state, "NEGOTIATE_DELAY", 1.0 * mult, "plea", juicy) + " · скрытность +4";
     }
-
     case "THREATEN_DETONATION": {
       const juicy   = rPick(SOCIAL_JUICE.THREATEN_DETONATION) || "Угроза подрыва.";
-      const basePts = 2.0 * mult * (1 + state.detonationRisk / 100);
+      const basePts = 2.0  *mult*  (1 + state.detonationRisk / 100);
       state.detonationRisk = clamp(state.detonationRisk + 5, 0, 100);
       return applySocial(state, "THREATEN_DETONATION", basePts, "threat", juicy) +
-        ` · риск ${Math.round(state.detonationRisk)}%`;
+         `· риск ${Math.round(state.detonationRisk)}%`;
     }
-
     case "SIGNAL_BLUFF": {
       const juicy = rPick(SOCIAL_JUICE.SIGNAL_BLUFF) || "Блеф.";
-      return applySocialBluffMixed(state, 1.0 * mult * (1 + state.stealth / 100), juicy);
+      return applySocialBluffMixed(state, 1.0  *mult*  (1 + state.stealth / 100), juicy);
     }
 
     // ── DESPERATION (заглушки) ───────────────────────────────
-
-    case "FUEL_BURN":
-      return `Сжигаем топливо (×${mult.toFixed(2)}): резервный манёвр.`;
-
-    case "CARGO_JETTISON": {
-      const dumped = Math.round(state.economy?.cargoUnits ?? 0);
-      if (state.economy) state.economy.cargoUnits = 0;
-      return `Сброс груза: −${dumped} ед. трюма. Облегчились.`;
+    case "FUEL_BURN": {
+      if (!state.economy) state.economy = {};
+      const maxF = state.economy.maxFuel || 100;
+      const burnAmt = Math.ceil(maxF * 0.25);
+      state.economy.spentFuel = (state.economy.spentFuel || 0) + burnAmt;
+      const distGain = Math.round(25 * mult * speedMult());
+      state.distance = clamp(state.distance + distGain, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
+      return `Сжечь топливо: −${burnAmt}л из бака, дист. +${distGain} → ${Math.round(state.distance)}`;
     }
-
+    case "CARGO_JETTISON": {
+      if (!state.economy) state.economy = {};
+      state.economy.dropCargoPct = Math.min(1, (state.economy.dropCargoPct || 0) + 0.33);
+      const distGain = Math.round(15 * mult * speedMult());
+      state.distance = clamp(state.distance + distGain, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
+      return `Сброс балласта: −33% трюма, дист. +${distGain} → ${Math.round(state.distance)}`;
+    }
     case "CALL_REINFORCEMENTS":
       return `Вызов подкрепления (×${mult.toFixed(2)}): сигнал ушёл в эфир. Ждём.`;
-
     default:
       return `[${type}] — пока не реализовано.`;
   }
@@ -1278,30 +1263,77 @@ function resolvePlayerAction(state, action, direction = null) {
 // ─────────────────────────────────────────────────────────────
 // Enemy turn
 // ─────────────────────────────────────────────────────────────
-
 export function enemyTurn(state) {
   if (state.over) return;
   const e    = state.enemy;
   const msgs = [];
 
-  if (e.burn > 0) {
-    const burnDmg = Math.round(e.burn * 0.5);
-    e.hull  = Math.max(0, e.hull - burnDmg);
-    e.burn  = Math.max(0, e.burn - 1);
-    msgs.push(`Burn: враг получает ${burnDmg} урона.`);
+  // 1. ИГРОК: Проверка реактора (каждый ход)
+  if (state.detonationRisk > 0) {
+    msgs.push(`⚠️ Проверка стабильности реактора (риск ${Math.round(state.detonationRisk)}%)...`);
+    if (rollDetonation(state)) {
+      msgs.push("💥 КРИТИЧЕСКИЙ СБОЙ! Реактор не выдержал напряжений и взорвался.");
+      state.log.push({ round: state.round, who: "system", title: "ДЕТОНАЦИЯ", messages: msgs });
+      end(state, "lose_detonation");
+      return;
+    } else {
+      msgs.push("✅ Реактор пока держится.");
+    }
   }
 
+  // 2. СТАН
+  if (e.stunned) {
+    e.stunned = false;
+    msgs.push("⚡ Враг оглушён ЭМИ — полностью пропускает ход (двигатели отключены).");
+    state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
+    return;
+  }
+
+  // 3. ГОРЕНИЕ
+  if (e.burn > 0) {
+    const burnDmg = Math.max(1, Math.ceil(e.burn * 0.35));
+    e.hull  = Math.max(0, e.hull - burnDmg);
+    e.burn  = Math.floor(e.burn * 0.5); // Быстрое затухание горения
+    msgs.push(`🔥 Горение: враг получает ${burnDmg} урона.`);
+    
+    if (e.hull <= 0) {
+        state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
+        end(state, "win_kill", "🔥 Враг сгорел дотла.");
+        return;
+    }
+  }
+
+  // 4. ОЦЕНКА УГРОЗЫ ВРАГОМ
+  if (state.detonationRisk > 0) {
+    msgs.push(`Враг оценивает шанс вашего подрыва...`);
+    if (Math.random() * 100 < state.detonationRisk) {
+      if ((e.scareLevel || 0) === 0) {
+        e.scareLevel = 1;
+        msgs.push(`😱 ВРАГ НАПУГАН! Он отказывается от абордажа и начинает отступать, но продолжает стрелять от злости.`);
+      } else if (e.scareLevel === 1) {
+        e.scareLevel = 2;
+        msgs.push(`😱😱 ВРАГ В ПАНИКЕ! Он окончательно решает, что вы псих. Прекращает огонь и просто уносит ноги.`);
+      }
+    }
+  }
+
+  // 5. ДВИЖЕНИЕ
   const old      = state.distance;
-  const fullMove = e.moveSpeed ?? -6;
+  let fullMove = e.moveSpeed ?? -6;
 
-  const willScan =
-    state.stealth >= STEALTH_SCAN_THRESHOLD &&
-    Math.random() < STEALTH_SCAN_CHANCE;
+  if ((e.scareLevel || 0) > 0) {
+    // Если напуган - двигается ОТ игрока (увеличивает дистанцию)
+    fullMove = Math.abs(fullMove);
+  }
 
+  const willScan = state.stealth >= STEALTH_SCAN_THRESHOLD && Math.random() < STEALTH_SCAN_CHANCE && (e.scareLevel || 0) < 2;
   const actualMove = willScan ? Math.ceil(fullMove / 2) : fullMove;
+
   state.distance   = clamp(state.distance + actualMove, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
+
+  let moveText = actualMove < 0 ? "сближается" : (actualMove > 0 ? "отступает" : "остается на месте");
   msgs.push(
-    `Враг: ${Math.round(old)} → ${Math.round(state.distance)}` +
+    `Враг ${moveText}: ${Math.round(old)} → ${Math.round(state.distance)}` +
     (willScan ? " (полудвиж. — сканирует)" : "") + "."
   );
 
@@ -1314,30 +1346,33 @@ export function enemyTurn(state) {
     return;
   }
 
+  // 6. СКАН
   if (willScan) {
     const scanPower   = clamp(e.scanPower ?? 0.15, 0, 1);
-    const stealthDrop = Math.round(state.stealth * (0.5 + scanPower * 0.5));
+    const stealthDrop = Math.round(state.stealth  *(0.5 + scanPower*  0.5));
     state.stealth     = Math.max(0, state.stealth - stealthDrop);
     state.stealthLock = 0;
-    msgs.push(`🔍 Скан: stealth −${stealthDrop} → ${Math.round(state.stealth)}`);
+    msgs.push(`🔍 Скан: скрытность −${stealthDrop} → ${Math.round(state.stealth)}`);
     msgs.push(`📻 «${pickLine(e.radio?.onScan)}»`);
     state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
     return;
   }
 
-  if (e.stunned) {
-    e.stunned = false;
-    msgs.push("Враг оглушён — пропускает атаку.");
+  // 7. ПОЛНАЯ ПАНИКА (ПРОПУСК АТАКИ)
+  if ((e.scareLevel || 0) === 2) {
+    msgs.push("🏃 Враг спасается бегством, не обращая на вас внимания.");
     state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
     return;
   }
 
-  if (Math.random() >= clamp(e.aggression ?? 0.7, 0, 1)) {
+  // 8. МАНЕВРИРОВАНИЕ
+  if (Math.random() >= clamp(e.aggression ?? 0.7, 0, 1) && (e.scareLevel || 0) === 0) {
     msgs.push("Враг маневрирует.");
     state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
     return;
   }
 
+  // 9. АТАКА ВРАГА
   let acc = accuracyAtDist(state.distance, false);
   if (e.accuracyDebuffRounds > 0) { acc *= 0.8; e.accuracyDebuffRounds--; }
   if (state.player.evasionPct > 0) {
@@ -1345,27 +1380,25 @@ export function enemyTurn(state) {
     state.player.evasionPct = 0;
   }
 
-  msgs.push(`📻 «${pickLine(e.radio?.onAttack)}»`);
+  if ((e.scareLevel || 0) === 1) {
+    msgs.push(`📻 «Ты больной ублюдок, я не подойду, но ты сдохнешь!»`);
+  } else {
+    msgs.push(`📻 «${pickLine(e.radio?.onAttack)}»`);
+  }
 
   if (Math.random() > acc) {
     msgs.push("Враг промахнулся.");
-    msgs.push(`📻 «${pickLine(e.radio?.onMiss)}»`);
+    if ((e.scareLevel || 0) === 0) msgs.push(`📻 «${pickLine(e.radio?.onMiss)}»`);
     state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
     return;
   }
 
-  const dmg = Math.round((e.baseDamage ?? 12) * (0.85 + Math.random() * 0.3));
+  const dmg = Math.round((e.baseDamage ?? 12)  *(0.85 + Math.random()*  0.3));
   const res  = applyDamageToPlayer(state, dmg);
+
   msgs.push(`Враг попал: ${res.dealt} урона.`);
   msgs.push(...(res.messages || []));
-  msgs.push(`📻 «${pickLine(e.radio?.onHit)}»`);
-
-  if (rollDetonation(state)) {
-    msgs.push("Сработала детонация.");
-    state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
-    end(state, "lose_detonation");
-    return;
-  }
+  if ((e.scareLevel || 0) === 0) msgs.push(`📻 «${pickLine(e.radio?.onHit)}»`);
 
   state.log.push({ round: state.round, who: "enemy", title: e.label, messages: msgs });
 }
@@ -1373,7 +1406,6 @@ export function enemyTurn(state) {
 // ─────────────────────────────────────────────────────────────
 // Damage to enemy
 // ─────────────────────────────────────────────────────────────
-
 function applyDamageToEnemy(state, amount, pierceShield) {
   let rem     = amount;
   let hullHit = 0;
@@ -1383,19 +1415,20 @@ function applyDamageToEnemy(state, amount, pierceShield) {
     state.enemy.shield -= s;
     rem -= s;
   }
+
   if (rem > 0) {
     const h = Math.min(rem, state.enemy.hull);
     state.enemy.hull = Math.max(0, state.enemy.hull - h);
     rem     -= h;
     hullHit += h;
 
-    const modDmg = Math.round(hullHit * (0.35 + 0.15 * Math.random()));
+    const modDmg = Math.round(hullHit  *(0.35 + 0.15*  Math.random()));
     if (modDmg > 0) {
       const mMsgs = [];
       applyDamageToEnemyModules(state, modDmg, mMsgs);
       if (mMsgs.length) {
         state.log.push({
-          round: state.round, who: "system", title: "ENEMY SYSTEMS",
+          round: state.round, who: "system", title: "СИСТЕМЫ ВРАГА",
           messages: mMsgs.slice(0, 3),
         });
       }
@@ -1415,7 +1448,6 @@ function rollDetonation(state) {
 // ─────────────────────────────────────────────────────────────
 // Round runner
 // ─────────────────────────────────────────────────────────────
-
 export function runRound(state, chosenCardIndex, direction = null) {
   if (state.over) return state;
 
@@ -1425,7 +1457,6 @@ export function runRound(state, chosenCardIndex, direction = null) {
   }
 
   state.round++;
-
   // сбрасываем chaos перед новым раундом
   state._lastChaos = null;
 
@@ -1436,7 +1467,6 @@ export function runRound(state, chosenCardIndex, direction = null) {
     end(state, "win_flee", "🚀 Вы рванули на дистанцию и вышли из контакта.");
     return state;
   }
-
   if (checkSocialWin(state)) return state;
 
   enemyTurn(state);
@@ -1444,7 +1474,6 @@ export function runRound(state, chosenCardIndex, direction = null) {
 
   // регенерация усталости двигателей
   state.engineFatigue = Math.max(0, (state.engineFatigue ?? 0) - ENGINE_FATIGUE_REGEN);
-
   // затухание скрытности
   if (!state.over) state.stealth = clamp(state.stealth - 10, 0, 100);
 
@@ -1479,7 +1508,7 @@ function end(state, result, extraMsg = null) {
   }[result] || result;
 
   state.log.push({
-    round: state.round, who: "system", title: "RESULT",
+    round: state.round, who: "system", title: "ИТОГ",
     messages: [msg].concat(extraMsg ? [extraMsg] : []),
   });
 }

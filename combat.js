@@ -1,3 +1,5 @@
+import { isActionType, getActionLabel, DIRECTIONAL_ACTIONS } from "./actions.js";
+import { buildCombatState, runRound, LIMITS, accuracyAtDist, stealthThresholdAtDist, previewSocialGain, distDamageMult } from "./combat_alpha_engine.js";
 // combat.js — бой, слоты экипировки, модалка снаряжения
 // v2: фильтр schema + новые редкости
 // v3: + tier-5 alloys, боевые эффекты, враги tier5/6
@@ -8,122 +10,9 @@ import {
 } from "./player.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ПУЛЫ ВРАГОВ
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ENEMY_POOL = {
-  tier3: [
-    {
-      id: "patrol_drone", name: "Патрульный дрон", icon: "🤖",
-      flavor: "Устаревшая модель автономной охраны. Медленный, но упрямый.",
-      hp: 120, attack: 25, defense: 10, speed: 5,
-      reward: { isotopes: 20, metals: 15 },
-    },
-    {
-      id: "pirate_scout", name: "Пиратский разведчик", icon: "☠️",
-      flavor: "Одиночка на лёгком корабле. Опасен только для неподготовленных.",
-      hp: 90, attack: 35, defense: 5, speed: 12,
-      reward: { isotopes: 15, minerals: 20 },
-    },
-    {
-      id: "mining_claim", name: "Клеймовый страж", icon: "⚖️",
-      flavor: "Корпоративный охранник. Действует строго по протоколу.",
-      hp: 150, attack: 20, defense: 20, speed: 3,
-      reward: { minerals: 30, data: 10 },
-    },
-  ],
-  tier4: [
-    {
-      id: "void_hunter", name: "Охотник Пустоты", icon: "🕳️",
-      flavor: "Неизвестного происхождения. Реагирует только на движение добывающего оборудования.",
-      hp: 280, attack: 60, defense: 25, speed: 18,
-      reward: { isotopes: 80, data: 50 },
-    },
-    {
-      id: "station_guardian", name: "Страж Станции", icon: "🏰",
-      flavor: "Тяжёлый боевой модуль. Никогда не отступает.",
-      hp: 400, attack: 45, defense: 40, speed: 5,
-      reward: { metals: 100, minerals: 60 },
-    },
-    {
-      id: "rogue_ai", name: "Бунтующий ИИ", icon: "👾",
-      flavor: "Старая управляющая система шахты. Решила что люди — угроза.",
-      hp: 200, attack: 80, defense: 10, speed: 25,
-      reward: { data: 100, isotopes: 40 },
-    },
-  ],
-  // ── Tier-5: Кладбище Плат ───────────────────────────────────────────────
-  tier5: [
-    {
-      id: "wraith_gunship", name: "Призрачный канонир", icon: "💀",
-      flavor: "Автономный боевой корабль из обломков верфи. Системы повреждены, но орудия работают.",
-      hp: 550, attack: 110, defense: 35, speed: 20,
-      reward: { alloys: 12, data: 40 },
-    },
-    {
-      id: "salvage_enforcer", name: "Страж Обломков", icon: "🦾",
-      flavor: "Тяжёлый охранный дрон, переделанный из промышленного манипулятора. Медленный, но бьёт как таран.",
-      hp: 750, attack: 85, defense: 70, speed: 8,
-      reward: { alloys: 15, metals: 80 },
-    },
-    {
-      id: "pirate_warlord", name: "Пиратский атаман", icon: "🏴‍☠️",
-      flavor: "Прожжённый пират с боевыми сплавами на корпусе и злобой в алгоритмах.",
-      hp: 480, attack: 130, defense: 30, speed: 30,
-      reward: { alloys: 10, isotopes: 120, minerals: 60 },
-    },
-  ],
-  // ── Tier-6: Чёрная Дуга ─────────────────────────────────────────────────
-  tier6: [
-    {
-      id: "arc_sentinel", name: "Страж Дуги", icon: "🕳️",
-      flavor: "Неизвестной постройки. Реагирует на любой сигнал. Цели не регистрирует — просто уничтожает.",
-      hp: 1100, attack: 180, defense: 90, speed: 22,
-      reward: { alloys: 25, data: 80 },
-    },
-    {
-      id: "ghost_fleet_remnant", name: "Остаток Призрачного Флота", icon: "👻",
-      flavor: "Три состыкованных корпуса, управляемых одним сошедшим с ума ИИ. Каждый корпус стреляет отдельно.",
-      hp: 900, attack: 220, defense: 50, speed: 40,
-      reward: { alloys: 20, data: 100, isotopes: 150 },
-    },
-    {
-      id: "black_arc_titan", name: "Титан Чёрной Дуги", icon: "⚫",
-      flavor: "Монстр. Откуда взялся — никто не знает. Уходить не собирается.",
-      hp: 1500, attack: 160, defense: 130, speed: 12,
-      reward: { alloys: 30, metals: 200, minerals: 150 },
-    },
-  ],
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// УЯЗВИМОСТИ ВРАГОВ
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ENEMY_WEAKNESSES = {
-  patrol_drone:          "compute",
-  pirate_scout:          "penetration",
-  mining_claim:          "shield",
-  void_hunter:           "energy",
-  station_guardian:      "energy",
-  rogue_ai:              "compute",
-  // ── tier-5 ──────────────────────────────────────────────
-  wraith_gunship:        "penetration",
-  salvage_enforcer:      "energy",
-  pirate_warlord:        "compute",
-  // ── tier-6 ──────────────────────────────────────────────
-  arc_sentinel:          "compute",
-  ghost_fleet_remnant:   "shield",
-  black_arc_titan:       "penetration",
-};
-
-const WEAKNESS_BONUS = 1.5;
-
-// ─────────────────────────────────────────────────────────────────────────────
 // ЗАЧИЩЕННЫЕ АСТЕРОИДЫ
 // ─────────────────────────────────────────────────────────────────────────────
-
-const CLEARED_DURATION_MS = 2 * 60 * 60 * 1000;
+const CLEARED_DURATION_MS = 2  *60*  60 * 1000;
 
 export function getClearedAsteroids() {
   try {
@@ -151,7 +40,6 @@ export function markAsteroidCleared(asteroidId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // СЛОТЫ ЭКИПИРОВКИ
 // ─────────────────────────────────────────────────────────────────────────────
-
 const SLOT_COUNT = 4;
 export let equippedItems = [null, null, null, null];
 
@@ -216,7 +104,6 @@ export function unequipSlot(slotIndex) {
 // ─────────────────────────────────────────────────────────────────────────────
 // КОНФИГУРАЦИЯ ХАРАКТЕРИСТИК ДЛЯ ОТОБРАЖЕНИЯ
 // ─────────────────────────────────────────────────────────────────────────────
-
 const SHIP_STAT_DEFS = [
   // ── БОЙ ──────────────────────────────────────────────────────────────────
   {
@@ -350,6 +237,7 @@ const SHIP_STAT_DEFS = [
     getter: eq => +_multFromList(eq, "guard_stealth_mult").toFixed(2),
     fmt: v => `${v}×`,
   },
+
   // ── ПОЛЁТ ────────────────────────────────────────────────────────────────
   {
     key: "flight_speed", label: "Скор. полёта", icon: "🚀", unit: "%", section: "flight",
@@ -369,6 +257,7 @@ const SHIP_STAT_DEFS = [
     getter: eq => +_multFromList(eq, "fuel_flight_efficiency_mult").toFixed(2),
     fmt: v => `${v}×`,
   },
+
   // ── ТРЮМ ─────────────────────────────────────────────────────────────────
   {
     key: "cargo_cap", label: "Трюм", icon: "🗃️", unit: "т", section: "cargo",
@@ -385,6 +274,7 @@ const SHIP_STAT_DEFS = [
     getter: eq => +_multFromList(eq, "cargo_compact_mult").toFixed(2),
     fmt: v => `${v}×`,
   },
+
   // ── ТОПЛИВО ──────────────────────────────────────────────────────────────
   {
     key: "fuel_cap", label: "Ёмкость бака", icon: "🛢️", unit: "л", section: "fuel",
@@ -421,16 +311,13 @@ const SHIP_STAT_DEFS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ — РАСЧЁТ ПО ПРОИЗВОЛЬНОМУ СПИСКУ
 // ─────────────────────────────────────────────────────────────────────────────
-
 function _clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
-
 function _effMult(raw, power) {
   const m = Number(raw);
   if (!isFinite(m) || m <= 0) return 1;
   const p = _clamp(Number(power ?? 1), 0, 1);
   return 1 + (m - 1) * p;
 }
-
 function _effAdd(raw, power) {
   const a = Number(raw);
   if (!isFinite(a)) return 0;
@@ -446,7 +333,6 @@ function _multFromList(list, key) {
   }
   return mult;
 }
-
 function _addFromList(list, key) {
   let sum = 0;
   for (const item of list) {
@@ -498,15 +384,18 @@ function _combatFromList(list) {
       const isNeg  = numStr.startsWith("−") || numStr.startsWith("-");
       const num    = parseFloat(numStr.replace(/[^0-9.]/g, ""));
       if (isNaN(num)) continue;
+
       const signed = isNeg ? -num : num;
+
       if (k.includes("щит")    || k.includes("shield"))                           raw.shield      += signed * power;
       if (k.includes("пробит") || k.includes("penetrat"))                         raw.penetration += signed * power;
       if (k.includes("энерги") || k.includes("energy"))                           raw.energy      += signed * power;
-      if (k.includes("вычисл") || k.includes("compute") || k.includes("tflops")) raw.compute     += signed * power;
+      if (k.includes("вычисл") || k.includes("compute") || k.includes("tflops"))  raw.compute     += signed * power;
     }
 
     // ── Боевые effects tier-5 → конвертируем в combat-сырьё ──
     const eff = item.effects ?? {};
+
     // Ракетное орудие: залп → penetration
     if (eff.rocket_salvo_mult !== undefined) {
       const m = _effMult(eff.rocket_salvo_mult, power);
@@ -516,6 +405,7 @@ function _combatFromList(list) {
     if (eff.rocket_ammo_add !== undefined) {
       raw.penetration += _effAdd(eff.rocket_ammo_add, power) * 4;
     }
+
     // Термическое → energy
     if (eff.thermal_damage_mult !== undefined) {
       const m = _effMult(eff.thermal_damage_mult, power);
@@ -524,6 +414,7 @@ function _combatFromList(list) {
     if (eff.thermal_burn_add !== undefined) {
       raw.energy += _effAdd(eff.thermal_burn_add, power) * 8;
     }
+
     // Кинетическое → penetration
     if (eff.kinetic_damage_mult !== undefined) {
       const m = _effMult(eff.kinetic_damage_mult, power);
@@ -533,10 +424,12 @@ function _combatFromList(list) {
       const m = _effMult(eff.armor_pierce_mult, power);
       raw.penetration += (m - 1) * 40;
     }
+
     // Маневровые → speed (через compute) + shield
     if (eff.evade_charge_add !== undefined) {
       raw.compute += _effAdd(eff.evade_charge_add, power) * 5;
     }
+
     // Маскировка → compute (помехи путают врага)
     if (eff.sensor_jam_add !== undefined) {
       raw.compute += _effAdd(eff.sensor_jam_add, power) * 1.2;
@@ -568,7 +461,6 @@ function _calcAllStats(list) {
 // ─────────────────────────────────────────────────────────────────────────────
 // БОЕВЫЕ СТАТЫ ИГРОКА (публичный API)
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function getPlayerCombatStats() {
   const raw = { shield: 0, penetration: 0, energy: 0, compute: 0 };
   const equipped = getEquippedItems();
@@ -582,21 +474,27 @@ export function getPlayerCombatStats() {
       const isNeg  = numStr.startsWith("−") || numStr.startsWith("-");
       const num    = parseFloat(numStr.replace(/[^0-9.]/g, ""));
       if (isNaN(num)) continue;
+
       const signed = isNeg ? -num : num;
+
       if (k.includes("щит")    || k.includes("shield"))                           raw.shield      += signed * power;
       if (k.includes("пробит") || k.includes("penetrat"))                         raw.penetration += signed * power;
       if (k.includes("энерги") || k.includes("energy"))                           raw.energy      += signed * power;
-      if (k.includes("вычисл") || k.includes("compute") || k.includes("tflops")) raw.compute     += signed * power;
+      if (k.includes("вычисл") || k.includes("compute") || k.includes("tflops"))  raw.compute     += signed * power;
     }
 
     // ── Боевые effects tier-5 ──────────────────────────────
     const eff = item.effects ?? {};
+
     if (eff.rocket_salvo_mult  !== undefined) raw.penetration += (_effMult(eff.rocket_salvo_mult, power)  - 1) * 60;
     if (eff.rocket_ammo_add    !== undefined) raw.penetration += _effAdd(eff.rocket_ammo_add, power) * 4;
+
     if (eff.thermal_damage_mult!== undefined) raw.energy      += (_effMult(eff.thermal_damage_mult, power) - 1) * 55;
     if (eff.thermal_burn_add   !== undefined) raw.energy      += _effAdd(eff.thermal_burn_add, power) * 8;
+
     if (eff.kinetic_damage_mult!== undefined) raw.penetration += (_effMult(eff.kinetic_damage_mult, power) - 1) * 65;
     if (eff.armor_pierce_mult  !== undefined) raw.penetration += (_effMult(eff.armor_pierce_mult, power)  - 1) * 40;
+
     if (eff.evade_charge_add   !== undefined) raw.compute     += _effAdd(eff.evade_charge_add, power) * 5;
     if (eff.sensor_jam_add     !== undefined) raw.compute     += _effAdd(eff.sensor_jam_add, power) * 1.2;
     if (eff.cloak_duration_add !== undefined) raw.compute     += _effAdd(eff.cloak_duration_add, power) * 2;
@@ -623,9 +521,9 @@ export function getPlayerCombatStats() {
 // ─────────────────────────────────────────────────────────────────────────────
 // СПЕЦИАЛЬНЫЕ ЭФФЕКТЫ
 // ─────────────────────────────────────────────────────────────────────────────
-
 function applySpecialEffect(effect, raw) {
   if (!effect?.type) return;
+
   switch (effect.type) {
     case "stat_multiplier": {
       const mult = _clamp(parseFloat(effect.value) || 1, 0.5, 3.0);
@@ -674,247 +572,455 @@ export function getSpecialFuelBonus() {
   return bonus;
 }
 
+
 // ─────────────────────────────────────────────────────────────────────────────
-// ВРАГИ
+// РЕАЛЬНЫЙ БОЙ (ИНТЕГРАЦИЯ С АЛЬФА-ДВИЖКОМ)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function pickEnemy(asteroidTier) {
-  // tier 1-2 — охраны нет, но на всякий случай fallback
-  if (asteroidTier <= 2) {
-    const pool = ENEMY_POOL.tier3;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  if (asteroidTier === 3) {
-    const pool = ENEMY_POOL.tier3;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  if (asteroidTier === 4) {
-    const pool = ENEMY_POOL.tier4;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  if (asteroidTier === 5) {
-    const pool = ENEMY_POOL.tier5;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  // tier 6+
-  const pool = ENEMY_POOL.tier6;
+  if (asteroidTier <= 2) return null;
+  const pools = {
+    3: [ { key: "minor_pirate", scale: 1.0, reward: { metals: 30, isotopes: 20 }, label: "Мелкий пират" }, 
+         { key: "belt_guard", scale: 1.0, reward: { minerals: 40, metals: 10 }, label: "Охрана пояса" } ],
+    4: [ { key: "belt_guard", scale: 1.5, reward: { data: 20, metals: 50 }, label: "Ветеран охраны" }, 
+         { key: "corp_agent", scale: 1.5, reward: { data: 40, isotopes: 50 }, label: "Корпоративный агент" } ],
+    5: [ { key: "pirate_pack", scale: 2.2, reward: { alloys: 15, data: 30 }, label: "Пиратская стая" }, 
+         { key: "berserker", scale: 2.0, reward: { alloys: 10, metals: 100 }, label: "Берсерк" } ],
+    6: [ { key: "berserker", scale: 3.5, reward: { alloys: 30, data: 80 }, label: "Безумный берсерк" }, 
+         { key: "pirate_pack", scale: 3.0, reward: { alloys: 25, isotopes: 200 }, label: "Пиратская армада" }, 
+         { key: "corp_agent", scale: 3.5, reward: { alloys: 40, metals: 150 }, label: "Элитный агент" } ]
+  };
+  const pool = pools[asteroidTier] || pools[6];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// СИМУЛЯЦИЯ БОЯ
-// ─────────────────────────────────────────────────────────────────────────────
+const CACHE_KEY = "combat_cards_cache_v3";
+function safeJsonParse(str, fallback) { try { return JSON.parse(str) || fallback; } catch { return fallback; } }
+function comboKey(id1, id2) { return ["COMBO", ...[id1, id2].sort()].join("__+__"); }
 
-function calcDamage(attack, defense, weaknessActive = false) {
-  const base   = Math.max(1, attack - defense / 2);
-  const spread = base * 0.2;
-  const raw    = base + (Math.random() * 2 - 1) * spread;
-  return Math.max(1, Math.round(raw * (weaknessActive ? WEAKNESS_BONUS : 1)));
-}
-
-export function simulateCombat(playerStats, enemy) {
-  let playerHp = playerStats.hp;
-  let enemyHp  = enemy.hp;
-  const log    = [];
-  let round    = 1;
-
-  const weakness       = ENEMY_WEAKNESSES[enemy.id];
-  const weaknessActive = !!(weakness && playerStats.weaknessTypes?.includes(weakness));
-  const playerFirst    = playerStats.speed >= enemy.speed;
-
-  while (playerHp > 0 && enemyHp > 0 && round <= 30) {
-    if (playerFirst) {
-      const d1 = calcDamage(playerStats.attack, enemy.defense, weaknessActive);
-      enemyHp -= d1;
-      log.push({ round, actor: "player", dmg: d1, enemyHp: Math.max(0, enemyHp), critical: weaknessActive });
-      if (enemyHp <= 0) break;
-      const d2 = calcDamage(enemy.attack, playerStats.defense, false);
-      playerHp -= d2;
-      log.push({ round, actor: "enemy", dmg: d2, playerHp: Math.max(0, playerHp) });
-    } else {
-      const d1 = calcDamage(enemy.attack, playerStats.defense, false);
-      playerHp -= d1;
-      log.push({ round, actor: "enemy", dmg: d1, playerHp: Math.max(0, playerHp) });
-      if (playerHp <= 0) break;
-      const d2 = calcDamage(playerStats.attack, enemy.defense, weaknessActive);
-      enemyHp -= d2;
-      log.push({ round, actor: "player", dmg: d2, enemyHp: Math.max(0, enemyHp), critical: weaknessActive });
-    }
-    round++;
-  }
-
-  return {
-    victory:       enemyHp <= 0,
-    rounds:        round,
-    finalPlayerHp: Math.max(0, playerHp),
-    finalEnemyHp:  Math.max(0, enemyHp),
-    weaknessActive,
-    log,
-    reward: enemyHp <= 0 ? enemy.reward : null,
+function normalizeCardLite(card) {
+  const out = {
+    origin_key:       String(card?.origin_key ?? "").trim(),
+    card_name:        String(card?.card_name ?? card?.origin_key ?? "CARD").trim(),
+    lore_description: String(card?.lore_description ?? "").trim(),
+    chaos_reason:     String(card?.chaos_reason ?? "").trim(),
+    actions: [],
   };
+  const acts = Array.isArray(card?.actions) ? card.actions : [];
+  for (const a of acts.filter(x => x?.role !== "chaos").slice(0, 2)) {
+    const t = String(a?.type ?? "").trim();
+    const m = Number(a?.mult ?? 1);
+    if (!isActionType(t)) continue;
+    out.actions.push({ type: t, mult: Math.max(0.6, Math.min(1.8, m)), role: "normal" });
+  }
+  while (out.actions.filter(a => a.role === "normal").length < 2) {
+    out.actions.push({ type: "NEGOTIATE_DELAY", mult: 1.0, role: "normal" });
+  }
+  if (out.actions[0].type === out.actions[1].type) out.actions[1].type = "DISTANCE_PUSH";
+  const chaosRaw    = acts.find(x => x?.role === "chaos") || acts[2];
+  const chaosType   = String(chaosRaw?.type ?? "").trim();
+  const chaosMultRaw = Number(chaosRaw?.mult ?? 0);
+  const inLow       = chaosMultRaw >= 0.2 && chaosMultRaw <= 0.5;
+  const inHigh      = chaosMultRaw >= 1.8 && chaosMultRaw <= 2.5;
+  out.actions.push({
+    type:  isActionType(chaosType) ? chaosType : "NEGOTIATE_DELAY",
+    mult:  (inLow || inHigh) ? chaosMultRaw : (Math.random() < 0.5 ? 0.3 : 2.0),
+    role:  "chaos",
+  });
+  return out;
 }
 
-function estimateWinChance(playerStats, enemy) {
-  const weakness       = ENEMY_WEAKNESSES[enemy.id];
-  const weaknessActive = !!(weakness && playerStats.weaknessTypes?.includes(weakness));
-  const pDps = Math.max(1, (playerStats.attack - enemy.defense  / 2) * (weaknessActive ? WEAKNESS_BONUS : 1));
-  const eDps = Math.max(1,  enemy.attack        - playerStats.defense / 2);
-  const pTtk = enemy.hp       / pDps;
-  const eTtk = playerStats.hp / eDps;
-  return Math.round(_clamp(eTtk / (pTtk + eTtk) * 100, 5, 95));
+function loadDeckFromCache(equippedItems) {
+  const cache = safeJsonParse(localStorage.getItem(CACHE_KEY), {});
+  const ids   = equippedItems.map(it => it.id);
+  const deck  = [];
+  for (const id of ids) if (cache[id]) deck.push(normalizeCardLite(cache[id]));
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const k = comboKey(ids[i], ids[j]);
+      if (cache[k]) deck.push(normalizeCardLite(cache[k]));
+    }
+  }
+  return deck;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ШТРАФ ЗА ПОРАЖЕНИЕ
-// ─────────────────────────────────────────────────────────────────────────────
-
-export async function applyDefeatPenalty(ratio = 0.20) {
-  const resources = getResources();
-  const penalty   = {};
-  for (const [k, v] of Object.entries(resources)) penalty[k] = Math.floor(v * ratio);
-  await spendResources(penalty);
-  return penalty;
+function cargoUnitsFromPlayerState() {
+  try {
+    return Object.values(window.CF_GET_STATE()?.cargo || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+  } catch { return 0; }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// МОДАЛКА БОЯ
-// ─────────────────────────────────────────────────────────────────────────────
+let REAL_STATE = null;
+let REAL_CALLBACK = null;
 
-export function showCombatModal(enemy, onVictory, onDefeat) {
-  const playerStats = getPlayerCombatStats();
-  const result      = simulateCombat(playerStats, enemy);
-  const winChance   = estimateWinChance(playerStats, enemy);
-
-  const modal   = document.getElementById("modal-combat");
+export async function showCombatModal(enemyCfg, onFinish) {
+  const modal = document.getElementById("modal-combat");
   const content = document.getElementById("combat-content");
   if (!modal || !content) return;
+  
+  REAL_CALLBACK = onFinish;
+  
+  const equippedItems = getEquippedItems();
+  const deck = loadDeckFromCache(equippedItems);
+  
+  if (deck.length < 4) {
+     const { showToast } = await import("./player.js");
+     showToast("ВНИМАНИЕ: Колода собрана не полностью. Сгенерируйте карты в Снаряжении!", "warning");
+  }
+  
+  const { getCredits } = await import("./player.js");
 
-  content.innerHTML = _renderCombatPreview(enemy, playerStats, winChance);
-  modal.classList.remove("hidden");
-
-  const btnStart   = document.getElementById("btn-combat-start");
-  const btnRetreat = document.getElementById("btn-combat-retreat");
-  const btnConfirm = document.getElementById("btn-combat-confirm");
-
-  if (btnConfirm) btnConfirm.classList.add("hidden");
-  if (btnStart)   btnStart.classList.remove("hidden");
-  if (btnRetreat) btnRetreat.classList.remove("hidden");
-
-  if (btnStart) {
-    const newStart = btnStart.cloneNode(true);
-    btnStart.parentNode.replaceChild(newStart, btnStart);
-    newStart.onclick = async () => {
-      newStart.disabled = true;
-      if (btnRetreat) btnRetreat.disabled = true;
-      await _runCombatAnimation(result, enemy);
-      if (result.victory) {
-        await addResources(result.reward);
-        if (btnConfirm) {
-          btnConfirm.textContent = "🎉 Продолжить добычу";
-          btnConfirm.classList.remove("hidden");
-          btnConfirm.onclick = () => { modal.classList.add("hidden"); onVictory(result); };
-        }
-      } else {
-        const penalty = await applyDefeatPenalty(0.20);
-        if (btnConfirm) {
-          btnConfirm.textContent = "💀 Отступить";
-          btnConfirm.classList.remove("hidden");
-          btnConfirm.onclick = () => { modal.classList.add("hidden"); onDefeat(result, penalty); };
-        }
+  REAL_STATE = buildCombatState({
+    equippedItems,
+    deckCards: deck,
+    enemyKey: enemyCfg.key,
+    playerCredits: getCredits(),
+    playerCargoUnits: cargoUnitsFromPlayerState(),
+    playerFuel: (await import("./player.js")).getFuel(),
+    playerMaxFuel: (await import("./player.js")).getFuelCapacity(),
+    tierScale: enemyCfg.scale,
+  });
+  REAL_STATE.enemy.reward = enemyCfg.reward;
+  REAL_STATE.enemy.label = enemyCfg.label;
+  
+  content.innerHTML = `
+    <style>
+      .combat-sim-hud { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+      .combat-sim-main { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .combat-sim-card { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; padding:10px; transition:border-color .15s; }
+      .combat-sim-card.escape-hint { border-color:var(--green); box-shadow:0 0 8px rgba(16,185,129,0.25); }
+      .combat-sim-card-title { font-weight:800; margin-bottom:6px; color:var(--accent); }
+      .combat-sim-card-lore { font-size:12px; opacity:.92; white-space:pre-wrap; margin-bottom:8px; color:var(--muted); font-style:italic;}
+      .combat-sim-effect-lines { font-size:12px; line-height:1.35; margin:6px 0 8px; }
+      .combat-sim-chaos-preview { margin-top: 8px; padding: 5px 8px; border-radius: 6px; border: 1px dashed rgba(255,255,255,0.2); font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+      .combat-sim-dir-btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px; }
+      .combat-sim-dir-btn { padding:8px 6px; font-weight:700; font-size:12px; }
+      .combat-sim-play-btn { width:100%; padding:10px 12px; font-weight:800; margin-top:6px; }
+      @media (max-width:768px) {
+        .combat-sim-hud, .combat-sim-main, .combat-sim-dir-btns { grid-template-columns:1fr; }
       }
-      newStart.classList.add("hidden");
-      if (btnRetreat) btnRetreat.classList.add("hidden");
-    };
-  }
-
-  if (btnRetreat) {
-    const newRetreat = btnRetreat.cloneNode(true);
-    btnRetreat.parentNode.replaceChild(newRetreat, btnRetreat);
-    newRetreat.onclick = async () => {
-      const penalty = await applyDefeatPenalty(0.10);
-      modal.classList.add("hidden");
-      onDefeat({ victory: false, retreated: true }, penalty);
-    };
-  }
-}
-
-function _renderCombatPreview(enemy, playerStats, winChance) {
-  const chanceClass  = winChance >= 60 ? "good" : winChance >= 40 ? "neutral" : "bad";
-  const rewardStr    = Object.entries(enemy.reward).map(([k, v]) => `${_resIcon(k)} +${v}`).join("  ");
-  const weakness     = ENEMY_WEAKNESSES[enemy.id];
-  const hasAdvantage = !!(weakness && playerStats.weaknessTypes?.includes(weakness));
-  const weakLabel    = {
-    compute:     "💻 Вычислит. мощность",
-    penetration: "⚔️ Пробитие",
-    energy:      "⚡ Энергия",
-    shield:      "🛡️ Щит",
-  }[weakness];
-
-  return `
-    <div class="combat-preview">
-      <div class="combatant">
-        <div class="combatant-icon">🚀</div>
-        <div class="combatant-name">Ваш корабль</div>
-        <div class="combatant-stats">
-          <span>❤️ ${playerStats.hp}</span>
-          <span>⚔️ ${playerStats.attack}</span>
-          <span>🛡️ ${playerStats.defense}</span>
-          <span>⚡ ${playerStats.speed}</span>
+    </style>
+    <div id="real-combat-hud" class="combat-sim-hud"></div>
+    <div class="combat-sim-main">
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">
+          🃏 Ваши действия: выберите карту или манёвр
+          <span style="color:var(--green)"> · зелёный = отступление</span>
         </div>
+        <div id="real-combat-hand" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
       </div>
-      <div class="combat-vs">
-        <div class="vs-text">VS</div>
-        <div class="win-chance ${chanceClass}">${winChance}% победы</div>
-        ${weakness ? `
-          <div class="weakness-hint ${hasAdvantage ? "advantage" : "neutral-hint"}">
-            ${hasAdvantage ? `✅ Слабость: ${weakLabel}` : `💡 Слаб к: ${weakLabel}`}
-          </div>` : ""}
-      </div>
-      <div class="combatant">
-        <div class="combatant-icon">${enemy.icon}</div>
-        <div class="combatant-name">${_esc(enemy.name)}</div>
-        <div class="combatant-flavor">${_esc(enemy.flavor)}</div>
-        <div class="combatant-stats">
-          <span>❤️ ${enemy.hp}</span>
-          <span>⚔️ ${enemy.attack}</span>
-          <span>🛡️ ${enemy.defense}</span>
-          <span>⚡ ${enemy.speed}</span>
-        </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📜 Лог</div>
+        <div id="real-combat-log" class="combat-log" style="height:350px;"></div>
       </div>
     </div>
-    <div class="combat-reward">Награда за победу: ${rewardStr}</div>
-    <div id="combat-log" class="combat-log"></div>
+  `;
+  
+  const actionsContainer = modal.querySelector(".combat-modal-actions");
+  actionsContainer.innerHTML = `
+    <button id="btn-real-combat-close" class="btn-primary hidden">Завершить бой</button>
+  `;
+  
+  const closeBtn = document.getElementById("btn-real-combat-close");
+  closeBtn.onclick = () => {
+    rc_clearChaosFlash();
+    modal.classList.add("hidden");
+    if (REAL_CALLBACK) REAL_CALLBACK(REAL_STATE);
+  };
+  
+  modal.querySelector("h2").textContent = "⚔️ БОЕВОЙ КОНТАКТ";
+  modal.classList.remove("hidden");
+  rc_renderAll();
+}
+
+// -------------------------------------------------------------
+// UI Rendering for Real Combat
+// -------------------------------------------------------------
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+function pct01(x) { return `${Math.round(clamp(x, 0, 1) * 100)}%`; }
+function bar(val, max, color = "var(--accent)") {
+  const pct = clamp(val / Math.max(1, max) * 100, 0, 100);
+  return `<div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin:3px 0 6px;overflow:hidden;">
+    <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .2s;"></div>
+  </div>`;
+}
+
+function rc_renderHud() {
+  const el = document.getElementById("real-combat-hud");
+  if (!el || !REAL_STATE) return;
+  const s = REAL_STATE;
+
+  const stealthHint = s.distance >= LIMITS.ESCAPE_DIST
+    ? `<span style="color:var(--green)">(dist-побег доступен)</span>`
+    : `<span style="color:var(--muted)">(нужно: скрытность ≥${stealthThresholdAtDist(s.distance)}, удержание ${s.stealthLock??0}/${LIMITS.STEALTH_LOCK_REQUIRED})</span>`;
+
+  const plea     = Number(s.social?.plea   ?? 0);
+  const threat   = Number(s.social?.threat ?? 0);
+  const detColor = s.detonationRisk >= 50 ? "var(--red)" : "var(--accent)";
+  const fatigue  = Math.round(s.engineFatigue ?? 0);
+  const fatColor = fatigue >= 60 ? "var(--red)" : fatigue >= 30 ? "#ff9800" : "var(--muted)";
+  const eDown    = (s.enemy.modules || []).reduce((acc, m) => acc + (m.destroyed?1:0), 0);
+  const eTotal   = (s.enemy.modules || []).length;
+  
+  let pAcc = accuracyAtDist(s.distance, true);
+  let eAcc = accuracyAtDist(s.distance, false);
+  if ((s.enemy.accuracyDebuffRounds ?? 0) > 0) eAcc *= 0.8;
+  if ((s.player.evasionPct ?? 0) > 0) eAcc *= (1 - clamp(s.player.evasionPct, 0, 85) / 100);
+
+  el.innerHTML = `
+    <div class="combat-sim-card">
+      <div class="combat-sim-card-title">🚀 Игрок</div>
+      <div>🛡 щит: <b>${s.player.shield}</b>/${s.player.maxShield}</div>
+      ${bar(s.player.shield, s.player.maxShield, "var(--accent)")}
+      <div>🧱 обшивка: <b>${s.player.hull}</b>/${s.player.maxHull}</div>
+      ${bar(s.player.hull, s.player.maxHull, "#8d6e63")}
+
+      <div>📏 Дистанция: <b>${Math.round(s.distance)}</b> <span style="color:var(--muted)">(побег ≥${LIMITS.ESCAPE_DIST})</span></div>
+      <div>🎯 попадание: вы <b>${pct01(pAcc)}</b> · враг <b>${pct01(eAcc)}</b></div>
+
+      <div style="margin-top:6px;">
+        <div>🕵 Скрытность: <b>${s.stealth.toFixed(0)}</b>/100 ${stealthHint}</div>
+        ${bar(s.stealth, 100, "var(--green)")}
+        <div style="color:${fatColor}">⚙️ Перегрев двиг.: <b>${fatigue}%</b></div>
+        ${bar(fatigue, 90, fatColor)}
+        <div>🤲 Убеждение: <b>${plea.toFixed(1)}</b>/${LIMITS.SOCIAL_PLEA_WIN}</div>
+        ${bar(plea, LIMITS.SOCIAL_PLEA_WIN, "#26a69a")}
+        <div>☢️ Угроза: <b>${threat.toFixed(1)}</b>/${LIMITS.SOCIAL_THREAT_WIN}</div>
+        ${bar(threat, LIMITS.SOCIAL_THREAT_WIN, "#ef5350")}
+        <div style="color:${detColor}">💥 Риск взрыва: <b>${s.detonationRisk.toFixed(0)}%</b></div>
+        ${bar(s.detonationRisk, 100, detColor)}
+      </div>
+    </div>
+    <div class="combat-sim-card">
+      <div class="combat-sim-card-title">☠️ ${_esc(s.enemy.label)}</div>
+      <div>🛡 щит: <b>${s.enemy.shield}</b>/${s.enemy.maxShield}</div>
+      ${bar(s.enemy.shield, s.enemy.maxShield, "#7986cb")}
+      <div>🧱 корпус: <b>${s.enemy.hull}</b>/${s.enemy.maxHull}</div>
+      ${bar(s.enemy.hull, s.enemy.maxHull, "#a1887f")}
+
+      <div>🔧 системы: <b>${eTotal-eDown}</b>/${eTotal} <span style="color:var(--muted)">(сломано: ${eDown})</span></div>
+      <div>🌡 Горение: <b>${Number(s.enemy.burn).toFixed(0)}</b></div>
+      <div>💢 агрессия: <b>${((s.enemy.aggression??0.7)*100).toFixed(0)}%</b></div>
+      <div>🔍 Скан-модуль: <b>${Math.round((s.enemy.scanPower??0)*100)}%</b></div>
+      <div>🎯 Баз. урон: <b>${s.enemy.baseDamage}</b></div>
+      <div>⏳ Раунд: <b>${s.round}</b>/${LIMITS.MAX_ROUNDS}</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);">
+        ${s.over ? `<b>ИТОГ: ${_esc({win_kill:'Враг уничтожен',win_flee:'Побег',win_stealth:'Скрылся',win_social_plea:'Договорился',win_social_threat:'Враг отступил',lose_board:'Абордаж',lose_modules:'Корабль разбит',lose_detonation:'Детонация бака'}[s.result] || s.result)}</b>` : "Бой продолжается…"}
+      </div>
+    </div>
   `;
 }
 
-async function _runCombatAnimation(result, enemy) {
-  const logEl = document.getElementById("combat-log");
-  if (!logEl) return;
-  logEl.innerHTML = "";
-  for (const event of result.log) {
-    await _delay(280);
-    const line = document.createElement("div");
-    line.className = `log-line ${event.actor === "player" ? "log-player" : "log-enemy"}`;
-    if (event.actor === "player") {
-      line.textContent = `⚔️ Вы: ${event.dmg} урона${event.critical ? " ⚡ СЛАБОСТЬ!" : ""} → враг: ${event.enemyHp} HP`;
-      if (event.critical) line.classList.add("log-critical");
-    } else {
-      line.textContent = `💥 ${enemy.name}: ${event.dmg} урона → вы: ${event.playerHp} HP`;
-    }
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
+function rc_actionName(type) {
+  const ACTION_SHORT = {
+    ATTACK_KINETIC: "Кинетический залп", ATTACK_THERMAL: "Термический прожиг", ATTACK_SHRAPNEL: "Шрапнель по сектору",
+    ATTACK_EMP: "ЭМИ-удар", PIERCE: "Бронебойный прокол", FOCUS_FIRE: "Фокус-огонь", DISRUPT_SENSORS: "Срыв сенсоров",
+    FUEL_IGNITE: "Поджог топлива", ROCKET_SALVO: "Ракетный залп", SHIELD_REGEN: "Реген щита", SHIELD_SPIKE: "Пик щита",
+    HULL_BRACE: "Укрепить корпус", EMERGENCY_REPAIR: "Аварийный ремонт", DAMAGE_CONTROL: "Контроль повреждений",
+    DISTANCE_PUSH: "Манёвр (от/к)", DISTANCE_PULL: "Сближение", FULL_BURN: "Полный форсаж (от/к)", DRIFT_SILENT: "Тихий дрейф (от/к)",
+    EVADE_SPIKE: "Резкий уклон", SENSOR_JAM: "Глушилка сенсоров", SIGNAL_BLUFF: "Блеф в эфире", DATA_SPOOF: "Спуфинг меток",
+    FAKE_MELTDOWN: "Ложная авария", EMP_STUN: "ЭМИ-стан", DECOY_DUMP: "Сброс приманок", OFFER_BRIBE: "Подкуп",
+    BROADCAST_PLEA: "Мольба в эфир", NEGOTIATE_DELAY: "Тянуть время", THREATEN_DETONATION: "Угроза подрыва",
+    FUEL_BURN: "Сжечь топливо", CARGO_JETTISON: "Сброс груза", CALL_REINFORCEMENTS: "Вызов подкрепления"
+  };
+  return ACTION_SHORT[type] || getActionLabel(type) || type;
+}
+
+function rc_previewActionLine(s, a, dir) {
+  const type = String(a?.type || "").trim();
+  const mult = clamp(Number(a?.mult ?? 1), 0.1, 3.0);
+  const eff = s?.player?._eff || {};
+  const speedMult = clamp(eff.flight_speed_mult ?? 1, 0.15, 18.0);
+  const fatMult = 1 - clamp(s.engineFatigue ?? 0, 0, 90) / 100;
+  
+  const dm = distDamageMult(type, s.distance);
+  let base = 0;
+  if (type === "ATTACK_KINETIC") base = 5 * mult * (eff.kinetic_damage_mult ?? 1);
+  else if (type === "ATTACK_THERMAL") base = 5 * mult * (eff.thermal_damage_mult ?? 1);
+  else if (type === "ATTACK_SHRAPNEL") base = 4 * mult * (eff.rocket_salvo_mult ?? 1);
+  else if (type === "ROCKET_SALVO") base = 10 * mult * (eff.rocket_salvo_mult ?? 1);
+  else if (type === "PIERCE") base = 4 * mult * (eff.armor_pierce_mult ?? 1);
+  else if (type === "FOCUS_FIRE") base = 9 * mult * (eff.kinetic_damage_mult ?? 1);
+  else if (type === "FUEL_IGNITE") base = 5 * mult * (eff.thermal_damage_mult ?? 1);
+  
+  const dmg = Math.round(base * dm);
+
+  if (type === "DRIFT_SILENT") {
+     const sAway = Math.round(20 * mult * (eff.guard_stealth_mult ?? 1) * (1 + (eff.cloak_duration_add ?? 0) / 10));
+     const sToward = Math.round(sAway * 1.3);
+     const delta = Math.round(6 * mult * speedMult);
+     return `Тихий дрейф: дист. ±${delta}, скрытность +${sAway} (от) / +${sToward} (к)`;
   }
-  await _delay(300);
-  const resultLine = document.createElement("div");
-  resultLine.className = `log-line log-result ${result.victory ? "log-victory" : "log-defeat"}`;
-  resultLine.textContent = result.victory ? "🎉 ПОБЕДА!" : "💀 ПОРАЖЕНИЕ";
-  logEl.appendChild(resultLine);
+  if (type === "DISTANCE_PUSH") {
+     const delta = Math.round(12 * mult * speedMult * fatMult);
+     return `Манёвр: дист. ±${delta}`;
+  }
+  if (type === "FULL_BURN") {
+     const delta = Math.round(20 * mult * speedMult * fatMult);
+     return `Форсаж: дист. ±${delta} (щит −10)`;
+  }
+  if (type === "DISTANCE_PULL") {
+     const pull = Math.round(12 * mult * speedMult * fatMult);
+     return `Сближение: дист. −${pull}`;
+  }
+  if (type === "CARGO_JETTISON") {
+     return `Сброс балласта: −33% трюма, дист. +${Math.round(15 * mult * speedMult)}`;
+  }
+  if (type === "FUEL_BURN") {
+     return `Сжечь топливо: −25% бака, дист. +${Math.round(25 * mult * speedMult)}`;
+  }
+
+  if (base > 0) return `${rc_actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)})`;
+  
+  if (type === "SHIELD_REGEN") return `Реген щита: +${Math.round(15*mult*(eff.shield_mult??1))}`;
+  if (type === "SHIELD_SPIKE") return `Пик щита: +${Math.round(25*mult*(eff.shield_mult??1))}`;
+  if (type === "EMERGENCY_REPAIR") return `Ремонт: +${Math.round(10*mult*(eff.hp_mult??1))}`;
+  if (type === "THREATEN_DETONATION") return `Угроза подрыва: риск взрыва +5%`;
+  
+  return `${rc_actionName(type)}`;
+}
+
+function rc_renderHand() {
+  const el = document.getElementById("real-combat-hand");
+  const s = REAL_STATE;
+  if (!el || !s) return;
+  
+  if (s.over) {
+    el.innerHTML = "";
+    document.getElementById("btn-real-combat-close")?.classList.remove("hidden");
+    return;
+  }
+
+  el.innerHTML = "";
+  const cards = (s.hand || []).slice(0, 2);
+  
+  for (let idx = 0; idx < 2; idx++) {
+    const c = cards[idx];
+    const cardEl = document.createElement("div");
+    cardEl.className = "combat-sim-card";
+
+    if (!c) {
+      cardEl.innerHTML = `<div class="combat-sim-card-title" style="opacity:.6">Нет карты</div>`;
+      el.appendChild(cardEl);
+      continue;
+    }
+
+    const normalActions = (c.actions || []).filter(a => a.role !== "chaos");
+    const hasDirectional = normalActions.some(a => DIRECTIONAL_ACTIONS.has(String(a?.type || "")));
+
+    const normalLinesHtml = normalActions.slice(0, 2).map(a => {
+      const line = rc_previewActionLine(s, a, "away");
+      return `<div>${_esc(line)}</div>`;
+    }).join("");
+
+    const chaosPreviewHtml = `
+      <div class="combat-sim-chaos-preview">
+        <span class="chaos-icon">⚡</span>
+        <span style="color:var(--muted);"><b>Скрытая аномалия</b></span>
+      </div>`;
+
+    cardEl.innerHTML = `
+      <div class="combat-sim-card-title">${_esc(c.card_name || c.origin_key)}</div>
+      <div class="combat-sim-card-lore">${_esc(c.lore_description || "")}</div>
+      <div class="combat-sim-effect-lines">${normalLinesHtml}</div>
+      ${chaosPreviewHtml}
+    `;
+
+    const playWithChaosFlash = (direction) => {
+      if (s.over) return;
+      runRound(s, idx, direction);
+      rc_renderAll();
+      if (s._lastChaos) setTimeout(() => rc_showChaosFlash(s._lastChaos), 300);
+    };
+
+    if (hasDirectional) {
+      const btnDiv = document.createElement("div");
+      btnDiv.className = "combat-sim-dir-btns";
+      btnDiv.innerHTML = `
+        <button type="button" class="btn-secondary combat-sim-dir-btn toward" ${s.over ? "disabled" : ""}>⬅ К врагу</button>
+        <button type="button" class="btn-primary combat-sim-dir-btn away" ${s.over ? "disabled" : ""}>От врага ➡</button>
+      `;
+      const [btnT, btnA] = btnDiv.querySelectorAll("button");
+      btnT.addEventListener("click", (e) => { e.stopPropagation(); playWithChaosFlash("toward"); });
+      btnA.addEventListener("click", (e) => { e.stopPropagation(); playWithChaosFlash("away"); });
+      cardEl.appendChild(btnDiv);
+    } else {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `btn-primary combat-sim-play-btn`;
+      btn.disabled = s.over;
+      btn.textContent = "▶ Сыграть эту карту";
+      btn.addEventListener("click", (e) => { e.stopPropagation(); playWithChaosFlash(null); });
+      cardEl.addEventListener("click", () => playWithChaosFlash(null));
+      cardEl.appendChild(btn);
+    }
+    el.appendChild(cardEl);
+  }
+}
+
+function rc_renderLog() {
+  const el = document.getElementById("real-combat-log");
+  if (!el || !REAL_STATE) return;
+  el.innerHTML = "";
+  for (const entry of REAL_STATE.log.slice(-240)) {
+    const line = document.createElement("div");
+    line.className = "log-line";
+    const isResult = entry.title === "ИТОГ";
+    if (isResult) line.classList.add("log-result");
+    else if (entry.who === "player") line.classList.add("log-player");
+    else if (entry.who === "enemy") line.classList.add("log-enemy");
+
+    const msgs = (entry.messages || []).map(m => {
+      const s = String(m);
+      if (s.startsWith("⚡ CHAOS")) return `<span style="color:#ff9800;font-weight:600;">${_esc(s)}</span>`;
+      return _esc(s);
+    }).join("<br>");
+
+    line.innerHTML = `<b>[${entry.round}] ${_esc(entry.who)}: ${_esc(entry.title)}</b><br>${msgs}`;
+    el.appendChild(line);
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+function rc_renderAll() {
+  rc_renderHud();
+  rc_renderHand();
+  rc_renderLog();
+}
+
+function rc_showChaosFlash(chaos) {
+  rc_clearChaosFlash();
+  if (!chaos) return;
+  const chaosMult = Number(chaos.mult);
+  const isHigh = chaosMult >= 1.8;
+  const isBad = chaosMult <= 0.4;
+  const color = isHigh ? "#ff9800" : isBad ? "#ef5350" : "#ce93d8";
+  const emoji = isHigh ? "⚡🔥" : isBad ? "⚡💀" : "⚡";
+  const borderColor = isHigh ? "rgba(255,152,0,0.6)" : isBad ? "rgba(239,83,80,0.6)" : "rgba(206,147,216,0.4)";
+
+  const overlay = document.createElement("div");
+  overlay.id = "real-chaos-flash";
+  overlay.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);pointer-events:auto;`;
+  
+  overlay.innerHTML = `
+    <div style="background:rgba(10,10,15,0.96);border:2px solid ${borderColor};border-radius:16px;padding:24px 32px;max-width:480px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">${emoji}</div>
+      <div style="font-size:13px;font-weight:900;color:${color};margin-bottom:12px;">CHAOS СРАБОТАЛ</div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px;">${_esc(rc_actionName(chaos.type))} ×${chaosMult.toFixed(2)}</div>
+      <div style="font-size:14px;color:#ddd;margin-bottom:16px;">${_esc(chaos.result)}</div>
+      ${chaos.chaos_reason ? `<div style="font-size:12px;color:#888;font-style:italic;">«${_esc(chaos.chaos_reason)}»</div>` : ""}
+      <button id="btn-real-chaos-ok" class="btn-primary" style="margin-top:16px;">ПОНЯТНО</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#btn-real-chaos-ok").onclick = rc_clearChaosFlash;
+}
+function rc_clearChaosFlash() {
+  document.getElementById("real-chaos-flash")?.remove();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UI: КОМПАКТНАЯ ПАНЕЛЬ СЛОТОВ
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function renderEquipmentSlots() {
   const container = document.getElementById("equipment-slots");
   if (!container) return;
@@ -947,7 +1053,7 @@ export function renderEquipmentSlots() {
                       onclick="event.stopPropagation(); window._unequipSlot(${i})"
                       title="Снять (только на базе)">✕</button>
             </div>
-          ` : `<div class="equip-slot-empty">Слот ${i + 1}</div>`}
+           `:` <div class="equip-slot-empty">Слот ${i + 1}</div>`}
         </div>
       `).join("")}
     </div>
@@ -963,7 +1069,6 @@ export function renderEquipmentSlots() {
 // ─────────────────────────────────────────────────────────────────────────────
 // МОДАЛКА СНАРЯЖЕНИЯ
 // ─────────────────────────────────────────────────────────────────────────────
-
 function _setupEquipmentModal() {
   const modal    = document.getElementById("modal-equipment");
   const btnClose = document.getElementById("btn-equipment-close");
@@ -972,6 +1077,7 @@ function _setupEquipmentModal() {
   if (btnClose) {
     btnClose.onclick = () => modal.classList.add("hidden");
   }
+
   modal.addEventListener("click", (e) => {
     if (e.target === modal) modal.classList.add("hidden");
   });
@@ -996,7 +1102,6 @@ function _renderEquipmentModal() {
 }
 
 // ─── Стат-бар ───────────────────────────────────────────────────────────────
-
 function _renderStatsBar() {
   const el = document.getElementById("equip-modal-stats-bar");
   if (!el) return;
@@ -1032,11 +1137,13 @@ function _renderStatsBar() {
     const visibleDefs = defs.filter(def => {
       const v = currentStats[def.key] ?? 0;
       const p = previewStats ? (previewStats[def.key] ?? 0) : 0;
+
       // Для "combat" tier-5 показываем только если есть значение > 0
       const isTier5Combat = [
         "rocket_salvo","rocket_ammo","thermal_dmg","thermal_burn",
         "evade_charges","kinetic_dmg","armor_pierce","sensor_jam","cloak_dur",
       ].includes(def.key);
+
       if (isTier5Combat && v === 0 && p === 0) return false;
       return true;
     });
@@ -1064,6 +1171,7 @@ function _renderStatsBar() {
 
       let deltaStr = "";
       let deltaCls = "neu";
+
       if (hasDelta) {
         const sign = delta > 0 ? "+" : "";
         const dAbs = Math.abs(delta);
@@ -1082,7 +1190,6 @@ function _renderStatsBar() {
           </div>
         </div>`;
     }
-
     html += `</div></div>`;
   }
 
@@ -1098,7 +1205,6 @@ function _renderStatsBar() {
 }
 
 // ─── Слоты в модалке ────────────────────────────────────────────────────────
-
 function _renderModalSlots() {
   const el = document.getElementById("equip-modal-slots");
   if (!el) return;
@@ -1129,6 +1235,7 @@ function _renderModalSlots() {
             </span>
             <div class="equip-modal-slot-name">${_esc(item.name)}</div>
             ${item.weight ? `<div style="font-size:10px;color:var(--muted);">⚖️ ${item.weight}т</div>` : ""}
+
             <div class="equip-modal-slot-effects">
               ${effLines.map(l => `
                 <div class="slot-eff-line">
@@ -1136,10 +1243,12 @@ function _renderModalSlots() {
                   <span class="slot-eff-val ${l.pos ? "pos" : l.neg ? "neg" : ""}">${l.value}</span>
                 </div>`).join("")}
             </div>
+
             ${item.specialEffect ? `
               <div class="equip-modal-slot-special">
                 ✨ ${_esc(item.specialEffect.description ?? item.specialEffect.type)}
               </div>` : ""}
+
             ${onBase
               ? `<button class="equip-modal-slot-unequip"
                          onclick="window._unequipSlotModal(${i})">✕ Снять</button>`
@@ -1150,7 +1259,6 @@ function _renderModalSlots() {
 }
 
 // ─── Инвентарь в модалке ────────────────────────────────────────────────────
-
 function _renderModalInventory() {
   const el = document.getElementById("equip-modal-inventory");
   if (!el) return;
@@ -1179,9 +1287,7 @@ function _renderModalInventory() {
       <div class="equip-inv-card ${isEquipped ? "is-equipped" : ""}"
            onmouseenter="window._equipHover('${_esc(item.id)}')"
            onmouseleave="window._equipHoverEnd()">
-
         <div class="equip-inv-card-name">${_esc(item.name)}</div>
-
         <div class="equip-inv-card-badges">
           <span class="artifact-rarity rarity-${item.rarity ?? "common"}">${_rarityLabel(item.rarity)}</span>
           <span class="${item.original ? "original-badge" : "echo-badge"}">
@@ -1190,7 +1296,6 @@ function _renderModalInventory() {
           ${isEquipped ? '<span class="equipped-indicator">✓ Надет</span>' : ""}
           ${item.weight ? `<span class="equip-inv-weight">⚖️ ${item.weight}т</span>` : ""}
         </div>
-
         <div class="equip-inv-card-desc">${_esc(item.description ?? "")}</div>
 
         <div class="equip-inv-card-effects">
@@ -1237,7 +1342,6 @@ function _renderModalInventory() {
 // ─────────────────────────────────────────────────────────────────────────────
 // ПОСТРОЕНИЕ СТРОК ЭФФЕКТОВ
 // ─────────────────────────────────────────────────────────────────────────────
-
 const EFF_LABELS = {
   // ── Существующие ──────────────────────────────────────────────────────────
   flight_speed_mult:                 { label: "Скор. полёта",       fmt: v => `×${v.toFixed(2)}` },
@@ -1254,6 +1358,7 @@ const EFF_LABELS = {
   hp_mult:                           { label: "HP ×",               fmt: v => `×${v.toFixed(2)}` },
   penetration_mult:                  { label: "Пробитие ×",         fmt: v => `×${v.toFixed(2)}` },
   guard_stealth_mult:                { label: "Скрытность",         fmt: v => `×${v.toFixed(2)}` },
+
   fuel_gen_add:                      { label: "Генерация топл.",    fmt: v => `+${v.toFixed(1)} л/ч` },
   fuel_drain_add:                    { label: "Утечки топлива",     fmt: v => `${v.toFixed(1)} л/ч` },
   dodge_chance_add:                  { label: "Уклонение",          fmt: v => `+${v.toFixed(0)}` },
@@ -1261,6 +1366,7 @@ const EFF_LABELS = {
   ore_upgrade_share_add:             { label: "Доля апгрейда",      fmt: v => `+${v.toFixed(0)}пп` },
   autopilot_guard_ignore_chance_add: { label: "Обход охраны",       fmt: v => `+${v.toFixed(0)}%` },
   autopilot_cycles_add:              { label: "Автопилот",          fmt: v => `+${Math.floor(v)} цикл.` },
+
   // ── Боевые tier-5 ─────────────────────────────────────────────────────────
   rocket_salvo_mult:                 { label: "Ракетный залп",      fmt: v => `×${v.toFixed(2)}` },
   rocket_ammo_add:                   { label: "Боезапас ракет",     fmt: v => `+${Math.round(v)}шт.` },
@@ -1290,7 +1396,6 @@ function _buildEffectLines(item) {
 
     lines.push({ label: def.label, value: str, pos, neg });
   }
-
   return lines;
 }
 
@@ -1303,6 +1408,7 @@ function _buildDeltaLines(item, currentStats) {
     const cur   = currentStats[def.key] ?? 0;
     const next  = newStats[def.key] ?? 0;
     const delta = next - cur;
+
     if (Math.abs(delta) < 0.001) continue;
 
     const good = def.higherIsBetter ? delta > 0 : delta < 0;
@@ -1314,14 +1420,12 @@ function _buildDeltaLines(item, currentStats) {
 
     lines.push({ icon: def.icon, label: def.label, delta: dStr, cls });
   }
-
   return lines;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ГЛОБАЛЬНЫЕ ХЭНДЛЕРЫ
 // ─────────────────────────────────────────────────────────────────────────────
-
 window._equipFromModal = function(itemId) {
   if (getExpedition()) {
     showToast("⚓ Экипировку можно менять только на базе.", "warning");
@@ -1336,6 +1440,7 @@ window._equipFromModal = function(itemId) {
     showToast("Все 4 слота заняты. Сначала снимите модуль.", "warning");
     return;
   }
+
   equipItem(item, freeSlot);
   import("./player.js").then(({ renderInventory }) => renderInventory());
 };
@@ -1373,7 +1478,6 @@ window._unequipSlot = function(slotIndex) {
 // ─────────────────────────────────────────────────────────────────────────────
 // УТИЛИТЫ
 // ─────────────────────────────────────────────────────────────────────────────
-
 function _resIcon(key) {
   return {
     isotopes: "☢️",

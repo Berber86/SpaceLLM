@@ -18,9 +18,8 @@ import {
 } from "./actions.js";
 
 const HYDRA_API_URL = "https://api.hydraai.ru/v1/chat/completions";
-const HYDRA_MODEL   = "hydra-gemini";
-
-const CACHE_KEY = "combat_cards_cache_v2";
+const HYDRA_MODEL   = "minimax-m2.7";
+const CACHE_KEY = "combat_cards_cache_v3";
 const RATE_KEY  = "hydra_deck_calls_v1";
 
 const RATE_LIMIT_MAX       = 5;
@@ -30,7 +29,6 @@ const DECK_SIZE_EXPECTED   = 10;
 // ─────────────────────────────────────────────────────────────
 // helpers
 // ─────────────────────────────────────────────────────────────
-
 function safeJsonParse(str, fallback) {
   try {
     const v = JSON.parse(str);
@@ -40,10 +38,14 @@ function safeJsonParse(str, fallback) {
 
 function extractJsonArray(raw) {
   let t = String(raw ?? "").trim();
-  t = t.replace(/```json/gi, "").replace(/```/g, "").trim();
+  // Агрессивная очистка от маркдауна в начале и в конце
+  t = t.replace(/^\s*\`\`\`(?:json)?/i, "").replace(/\`\`\`\s*$/i, "").trim();
+  
   const a = t.indexOf("[");
   const b = t.lastIndexOf("]");
-  if (a !== -1 && b !== -1 && b > a) t = t.slice(a, b + 1);
+  if (a !== -1 && b !== -1 && b > a) {
+      t = t.slice(a, b + 1);
+  }
   return t;
 }
 
@@ -78,7 +80,6 @@ function nowMs() { return Date.now(); }
 // ─────────────────────────────────────────────────────────────
 // cache
 // ─────────────────────────────────────────────────────────────
-
 function loadCache() {
   const v = safeJsonParse(localStorage.getItem(CACHE_KEY), {});
   return (v && typeof v === "object") ? v : {};
@@ -92,7 +93,6 @@ function saveCache(cache) {
 // ─────────────────────────────────────────────────────────────
 // rate limit
 // ─────────────────────────────────────────────────────────────
-
 function rateLimitCheckAndMark() {
   const now      = nowMs();
   const arr      = safeJsonParse(localStorage.getItem(RATE_KEY), []);
@@ -113,7 +113,6 @@ function rateLimitCheckAndMark() {
 // ─────────────────────────────────────────────────────────────
 // hydra chat
 // ─────────────────────────────────────────────────────────────
-
 async function hydraChat({ apiKey, systemPrompt, userPrompt, temperature = 0.92, max_tokens = 2000 }) {
   const controller = new AbortController();
   const timeout    = setTimeout(() => controller.abort(), 45_000);
@@ -148,7 +147,9 @@ async function hydraChat({ apiKey, systemPrompt, userPrompt, temperature = 0.92,
     }
 
     const data = await resp.json().catch(() => ({}));
-    return String(data?.choices?.[0]?.message?.content ?? "").trim();
+    const raw = String(data?.choices?.[0]?.message?.content ?? "").trim();
+    console.log("[LLM RAW RESPONSE - Combat Deck]:\n", raw);
+    return raw;
   } finally {
     clearTimeout(timeout);
   }
@@ -157,7 +158,6 @@ async function hydraChat({ apiKey, systemPrompt, userPrompt, temperature = 0.92,
 // ─────────────────────────────────────────────────────────────
 // module normalization
 // ─────────────────────────────────────────────────────────────
-
 const WEAPON_RECIPES = new Set([
   "rocket_module", "thermal_module", "maneuvre_module",
   "kinetic_module", "stealth_module",
@@ -187,8 +187,10 @@ function extractHooks(statsObj) {
     const s   = String(val).trim();
     const num = parseFloat(s.replace(/[^0-9.]/g, ""));
     if (Number.isNaN(num)) continue;
+
     const isNeg = s.startsWith("−") || s.startsWith("-");
     const abs   = Math.abs(isNeg ? -num : num);
+
     if (!isNeg && abs > bestAbs)  { bestAbs = abs;  best  = `${s} — ${label}`; }
     if (isNeg  && abs > worstAbs) { worstAbs = abs; worst = `${s} — ${label}`; }
   }
@@ -206,6 +208,7 @@ function normalizeModuleFull(itemLike) {
   const statsObj    = itemLike.stats || {};
   const stats_lines = Object.entries(statsObj).map(([label, v]) => `${v} — ${label}`);
   const hooks       = extractHooks(statsObj);
+
   const recipeType  = itemLike.recipeType || null;
   const recipeHints = (RECIPE_ACTION_HINTS[recipeType] || []).filter(isActionType);
 
@@ -244,9 +247,9 @@ function resolveEquippedModules() {
 // ─────────────────────────────────────────────────────────────
 // ship tone
 // ─────────────────────────────────────────────────────────────
-
 function buildShipTone(modules) {
   const weapons = modules.filter(m => WEAPON_RECIPES.has(m.recipeType)).length;
+
   if (weapons >= 2) return {
     shipRole: "вооружённая баржа/корвет на коленке",
     tone: "Ты уже не шахтёр. Ты — жадный, вооружённый до зубов мудак на грузовике.",
@@ -267,7 +270,6 @@ function buildShipTone(modules) {
 // ─────────────────────────────────────────────────────────────
 // card normalization (v4: три действия)
 // ─────────────────────────────────────────────────────────────
-
 function normalizeCard(card) {
   const out = {
     origin_key:       String(card?.origin_key ?? "").trim(),
@@ -287,6 +289,7 @@ function normalizeCard(card) {
     const a    = actions[i] || {};
     const type = String(a.type ?? "").trim();
     if (!isActionType(type)) continue;
+
     out.actions.push({
       type,
       mult:  clamp(a.mult, 0.6, 1.8),
@@ -304,6 +307,7 @@ function normalizeCard(card) {
     const rawMult = Number(chaos.mult ?? 0);
     const inLow   = rawMult >= 0.2 && rawMult <= 0.5;
     const inHigh  = rawMult >= 1.8 && rawMult <= 2.5;
+
     const chaosMult = (inLow || inHigh) ? rawMult : rollChaosMult();
 
     out.actions.push({
@@ -348,7 +352,6 @@ function normalizeCard(card) {
 // ─────────────────────────────────────────────────────────────
 // deck object
 // ─────────────────────────────────────────────────────────────
-
 export const CombatDeck = {
   cache: loadCache(),
   _inFlight: null,
@@ -358,6 +361,7 @@ export const CombatDeck = {
   getMissing(modules) {
     const missingSolo  = modules.filter(m => !this.cache[m.id]);
     const missingCombo = [];
+
     for (let i = 0; i < modules.length; i++) {
       for (let j = i + 1; j < modules.length; j++) {
         const key = comboKey(modules[i].id, modules[j].id);
@@ -397,9 +401,11 @@ export const CombatDeck = {
     try {
       if (!this._inFlight) this._inFlight = this.ensureCardsForCurrentBuild();
       const { deck, modules } = await this._inFlight;
+
       loading?.classList.add("hidden");
       this.renderDeck(deck, modules);
       showToastMaybe(`🃏 Колода готова: ${deck.length}/${DECK_SIZE_EXPECTED}`, "success");
+
     } catch (e) {
       loading?.classList.add("hidden");
       if (container) container.innerHTML = `<div class="error-msg">Ошибка: ${escHtml(e?.message || e)}</div>`;
@@ -436,6 +442,7 @@ export const CombatDeck = {
         if (!ok) throw new Error("Отменено игроком.");
         localStorage.setItem("deck_llm_cost_ack", "1");
       }
+
       rateLimitCheckAndMark();
       await this.generateMissingCards({ apiKey, modules, missingSolo, missingCombo });
     }
@@ -448,10 +455,10 @@ export const CombatDeck = {
 
     // строим список chaos-подсказок для всех action types
     const chaosHintsList = Object.entries(CHAOS_FLAVOR_HINTS)
-      .map(([type, hint]) => `  ${type}: "${hint}"`)
+      .map(([type, hint]) => `${type}: "${hint}"`)
       .join("\n");
 
-    const systemPrompt = `
+        const systemPrompt = `
 Ты — сверх циничный писатель лора в игре Cosmic Forge.
 Сцена: перехват/бой с пиратом или охраной в астероидном поясе, прямо сейчас.
 
@@ -469,27 +476,35 @@ export const CombatDeck = {
 
 CHAOS-ДЕЙСТВИЕ (actions[2]):
 - role: "chaos" — обязательное поле
-- type: ЛЮБОЙ из ACTION_TYPES, но НЕОЖИДАННЫЙ для данного модуля 
-  
-- mult: ЛИБО в диапазоне 0.2..0.4 (слабый/негативный хаос)
-        ЛИБО в диапазоне 1.8..2.5 (мощный хаос)
-  НЕ используй диапазон 0.5..1.7 для chaos-действия
-- chaos_reason: 1-2 предложения в духе "это произошло потому что..."
-  Причина должна быть технически абсурдной но звучать правдоподобно
-  как 
-  последствие первых двух действий. Цинично. Смешно. Упорото.
-
+- type: Выбери действие из ACTION_TYPES, которое является ПРЯМЫМ СЛЕДСТВИЕМ, ИСКАЖЕНИЕМ ИЛИ ПОБОЧНЫМ ЭФФЕКТОМ нормальных действий. 
+  (Например: попытка усилить щит вызвала КЗ и отключила сенсоры -> DISRUPT_SENSORS. Попытка выстрелить привела к перегреву реактора -> FUEL_IGNITE. Попытка уклониться бросила корабль в астероид -> негативный mult на уклонение).
+- mult: ЛИБО [0.2..0.4] (провал/урон по себе), ЛИБО [1.8..2.5] (опасный супер-перегруз).
+- chaos_reason: Опиши ТЕХНИЧЕСКУЮ ЦЕПНУЮ РЕАКЦИЮ. Как именно активация первых двух действий логически спровоцировала этот хаос. Игрок должен прочитать и сказать: "А, ну да, логично, что из-за этого оно коротнуло". Причина должна быть абсурдной, но технически правдоподобной.
 
 ЖЁСТКИЕ ПРАВИЛА:
-- НЕ выдумывай новых модулей/оружия/подсистем. Только то что есть в 4 модулях.
-- На каждую запрошенную карту — ровно один объект в массиве.
+- НЕ выдумывай новых модулей/оружия. Только то, что есть в модулях.
 - Верни ТОЛЬКО валидный JSON-массив. Никаких \`\`\`, никакого текста вокруг.
-- Поля карты:
-  - origin_key (строго как дано)
-  - card_name (коротко хлёстко)
-  - lore_description (3–5 предложений, момент боя, включая намёк на chaos)
-  - chaos_reason (отдельное поле, 2-3 предложения объяснения chaos-действия, которое соучилось после lore_description)
-  - actions: массив из РОВНО 3 объектов [{type,mult,role},...]
+- Поля карты: origin_key, card_name, lore_description, chaos_reason, actions (массив из РОВНО 3 объектов [{type,mult,role},...]).
+
+ПОДСКАЗКИ ДЛЯ ХАОС-ДЕЙСТВИЙ (примеры логических поломок):
+${chaosHintsList}
+
+ПРИМЕР ОЖИДАЕМОГО ОТВЕТА:
+```json
+[
+  {
+    "origin_key": "art_12345",
+    "card_name": "Ржавый таран",
+    "lore_description": "Я направляю свой нос прямо в брюхо этому ублюдку. Двигатели воют, металл скрежещет, но мы сближаемся на дистанцию удара.",
+    "chaos_reason": "Из-за форсажа перегорел предохранитель, и тормозные двигатели включились на полную мощность вместо маршевых, отбросив нас назад.",
+    "actions": [
+      { "type": "DISTANCE_PULL", "mult": 1.4, "role": "normal" },
+      { "type": "HULL_BRACE", "mult": 1.1, "role": "normal" },
+      { "type": "DISTANCE_PUSH", "mult": 0.3, "role": "chaos" }
+    ]
+  }
+]
+```
 
 ACTION_TYPES (все допустимые):
 ${ACTION_TYPES.join(", ")}
@@ -498,7 +513,7 @@ ${ACTION_TYPES.join(", ")}
     const payload = {
       scene: {
         situation: `Перехват. Твой корабль: ${shipTone.shipRole}.`,
-        requirement: "3 действия на карту. actions[2] — chaos, неожиданный тип, экстремальный mult.",
+        requirement: "3 действия. actions[2] — chaos, строго вытекает из первых двух как цепная реакция (поломка или перегруз).",
       },
       equipped_modules: modules.map(m => ({
         id:           m.id,
@@ -521,7 +536,7 @@ ${ACTION_TYPES.join(", ")}
           origin_key:   m.id,
           module_id:    m.id,
           hint_actions: (m.recipeHints || []).filter(isActionType).slice(0, 6),
-          chaos_hint:   "выбери НЕОЖИДАННЫЙ для этого модуля тип действия",
+          chaos_hint: "выбери действие, которое станет логичной поломкой или побочным эффектом от первых двух действий",
         })),
         combo: missingCombo.map(c => ({
           origin_key:   c.key,
@@ -529,7 +544,7 @@ ${ACTION_TYPES.join(", ")}
           moduleB_id:   c.b.id,
           hint_actions: [...(c.a.recipeHints || []), ...(c.b.recipeHints || [])]
             .filter(isActionType).filter((v, i, arr) => arr.indexOf(v) === i).slice(0, 6),
-          chaos_hint:   "выбери действие которое НЕ ожидаешь от комбинации этих двух модулей",
+          chaos_hint: "опиши цепную реакцию: как совместная работа этих двух модулей привела к катастрофе или перегрузу",
         })),
       },
     };
@@ -583,7 +598,6 @@ ${ACTION_TYPES.join(", ")}
 
     for (const card of deck) {
       if (!card) continue;
-
       const el = document.createElement("div");
       el.className = "battle-card-item";
 
@@ -592,12 +606,12 @@ ${ACTION_TYPES.join(", ")}
 
       const normalActionsHtml = normal.map(a => {
         const label = CARD_ACTIONS[a.type] || a.type;
-        return `<span class="bc-tag" title="${escHtml(label)}">${escHtml(a.type)} ×${Number(a.mult).toFixed(2)}</span>`;
+        return `<span class="bc-tag" title="${escHtml(a.type)}">${escHtml(label)} ×${Number(a.mult).toFixed(2)}</span>`;
       }).join("");
 
       const chaosHtml = chaos
         ? `<div class="bc-chaos">
-            <span class="bc-chaos-tag">⚡ CHAOS: ${escHtml(chaos.type)} ×${Number(chaos.mult).toFixed(2)}</span>
+            <span class="bc-chaos-tag">⚡ CHAOS: ${escHtml(CARD_ACTIONS[chaos.type] || chaos.type)} ×${Number(chaos.mult).toFixed(2)}</span>
             ${card.chaos_reason
               ? `<div class="bc-chaos-reason">«${escHtml(card.chaos_reason)}»</div>`
               : ""}
@@ -618,7 +632,6 @@ ${ACTION_TYPES.join(", ")}
         <div class="bc-actions">${normalActionsHtml}</div>
         ${chaosHtml}
       `;
-
       container.appendChild(el);
     }
 
@@ -635,7 +648,6 @@ ${ACTION_TYPES.join(", ")}
 // ─────────────────────────────────────────────────────────────
 // UI hooks
 // ─────────────────────────────────────────────────────────────
-
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-open-deck")?.addEventListener("click",
     () => CombatDeck.openDeckModal()
@@ -648,7 +660,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // ─────────────────────────────────────────────────────────────
 // debug
 // ─────────────────────────────────────────────────────────────
-
 window.CombatDeck = CombatDeck;
 
 window.dumpEquippedForDeck = () => {

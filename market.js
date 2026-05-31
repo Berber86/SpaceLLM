@@ -1,5 +1,4 @@
 // market.js — рынок: эхо-копии, топливо, ресурсы (v3: + alloys tier-5)
-
 import { subscribeMarket, incrementSaleCount } from "./firebase.js";
 import {
   addToInventory, getUid,
@@ -26,13 +25,11 @@ export function initMarket() {
 // ─────────────────────────────────────────────────────────────
 // ARTIFACT MARKET
 // ─────────────────────────────────────────────────────────────
-
 function renderMarket(items) {
   const list = document.getElementById("market-list");
   if (!list) return;
 
   const myUid = getUid();
-
   const artifactItems = (items ?? []).filter(i =>
     !i.isFuelListing &&
     !i.isResourceListing &&
@@ -107,7 +104,6 @@ function renderMarket(items) {
 // ─────────────────────────────────────────────────────────────
 // FUEL MARKET UI
 // ─────────────────────────────────────────────────────────────
-
 function renderFuelMarket() {
   const el = document.getElementById("fuel-market-section");
   if (!el) return;
@@ -167,7 +163,6 @@ function renderFuelMarket() {
     const cost   = document.getElementById("fuel-buy-cost");
     if (cost) cost.textContent = `${liters * FUEL_MARKET.buyPricePerLiter} кр.`;
   });
-
   document.getElementById("fuel-sell-amount")?.addEventListener("input", e => {
     const liters = parseInt(e.target.value) || 0;
     const income = document.getElementById("fuel-sell-income");
@@ -178,7 +173,6 @@ function renderFuelMarket() {
 // ─────────────────────────────────────────────────────────────
 // RESOURCE MARKET UI
 // ─────────────────────────────────────────────────────────────
-
 // ── alloys добавлены: дорогие (боевые сплавы редкие) ─────────
 const RESOURCE_PRICES = {
   isotopes: { buy: 10,     sell: 7     },
@@ -219,14 +213,12 @@ function renderResourceMarket() {
 // ─────────────────────────────────────────────────────────────
 // BUY / SELL FUEL
 // ─────────────────────────────────────────────────────────────
-
 window._buyFuel = async function() {
   const liters = parseInt(document.getElementById("fuel-buy-amount")?.value) || 0;
   if (liters <= 0) return;
 
   const totalCost = liters * FUEL_MARKET.buyPricePerLiter;
   const ok        = await spendCredits(totalCost);
-
   if (!ok) {
     showToast(`💰 Нужно ${totalCost} кредитов. Есть: ${Math.floor(getCredits())}`, "warning");
     return;
@@ -240,7 +232,6 @@ window._buyFuel = async function() {
   } else {
     showToast(`⛽ Куплено ${liters}л: на склад +${res.toStorage}л`, "success");
   }
-
   renderFuelMarket();
 };
 
@@ -263,7 +254,6 @@ window._sellFuel = async function() {
 // ─────────────────────────────────────────────────────────────
 // BUY / SELL RESOURCES
 // ─────────────────────────────────────────────────────────────
-
 window._buyResource = async function(resource) {
   const amount = parseInt(document.getElementById(`res-amount-${resource}`)?.value) || 0;
   if (amount <= 0) return;
@@ -307,6 +297,7 @@ window._sellResource = async function(resource) {
 
   const income = amount * prices.sell;
   await addCredits(income);
+
   showToast(
     `${resIcon(resource)} Продано ${amount} за ${income} кр.`,
     "success"
@@ -317,14 +308,12 @@ window._sellResource = async function(resource) {
 // ─────────────────────────────────────────────────────────────
 // BUY ECHO
 // ─────────────────────────────────────────────────────────────
-
 window._buyEcho = async function(itemId) {
   const items = window._marketItems ?? [];
   const item  = items.find(i => i.id === itemId);
   if (!item) return;
 
   const price = item.price?.credits ?? 0;
-
   const ok = await spendCredits(price);
   if (!ok) {
     showToast(`💰 Нужно ${price} кредитов. Есть: ${Math.floor(getCredits())}`, "warning");
@@ -341,13 +330,13 @@ window._buyEcho = async function(itemId) {
   await addToInventory(echoCopy);
   await incrementSaleCount(itemId);
   renderInventory();
+
   showToast(`✅ Куплено: ${item.name} за ${price} кр.`, "success");
 };
 
 // ─────────────────────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────────────────────
-
 function resIcon(key) {
   return {
     isotopes: "☢️",

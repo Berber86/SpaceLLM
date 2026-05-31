@@ -9,14 +9,12 @@ import { loadPlayer, savePlayer, updatePlayer } from "./firebase.js";
 // ─────────────────────────────────────────────────────────────────────────────
 // SCHEMA / WIPE
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const PLAYER_SCHEMA_VERSION = 2;
 export const ITEM_SCHEMA_VERSION   = 2;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ФИЗИЧЕСКИЕ КОНСТАНТЫ КОРАБЛЯ
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const SHIP = {
   baseSpeed:          0.5,
   baseFuelCapacity:   100,
@@ -53,7 +51,6 @@ const DEFAULT_PLAYER = {
   workshop:     [],
   expedition:   null,
   cargo:        { ...EMPTY_RES_MAP },
-
   reservedResources: { ...EMPTY_RES_MAP },
   reservedExpiresAt: 0,
 };
@@ -64,7 +61,6 @@ let uid   = null;
 // ─────────────────────────────────────────────────────────────────────────────
 // СТАРТОВЫЙ МОДУЛЬ
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const STARTER_AUTOPILOT = {
   schemaVersion: ITEM_SCHEMA_VERSION,
   id:            "starter_autopilot",
@@ -74,19 +70,15 @@ export const STARTER_AUTOPILOT = {
   createdAt:     0,
   weight:        1.0,
   foundOn:       null,
-
   rarity:        "common",
   recipeType:    "autopilot_module",
   specialEffect: null,
-
   name: "Автопилот УП-3 «Черепаха»",
-
   description:
     "Учебный автопилот третьего поколения, списанный с флота ещё до твоего рождения. " +
     "Корпус исцарапан, разъёмы окислены, прошивка обновлялась последний раз когда ты ещё пешком под стол ходил. " +
     "Тем не менее — запускается, держит курс, выполняет циклы. " +
     "Три цикла подряд без твоих рук на штурвале. Негусто, но для начала сойдёт.",
-
   flavor:
     "Достал из ящика с надписью «УТИЛЬ». Подключил.\n" +
     "Оно пикнуло. Я чуть не выронил кофе.\n" +
@@ -94,11 +86,9 @@ export const STARTER_AUTOPILOT = {
     "На корпусе чья-то гравировка: «Не трогай реле №4».\n" +
     "Реле №4 я, конечно, потрогал. Всё нормально, кажется.\n" +
     "Буду использовать пока не сломается. Или пока не найду что-то лучше.",
-
   effects: {
     autopilot_cycles_add: 3,
   },
-
   stats: {
     "Автоциклы добычи": "+3 цикла",
   },
@@ -107,7 +97,6 @@ export const STARTER_AUTOPILOT = {
 // ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function initPlayer() {
   uid = localStorage.getItem("player_uid");
   if (!uid) {
@@ -119,7 +108,6 @@ export async function initPlayer() {
 
   if (!saved || saved.schemaVersion !== PLAYER_SCHEMA_VERSION) {
     state = { ...DEFAULT_PLAYER };
-
     try { localStorage.removeItem("equipped_slots"); } catch {}
     try { localStorage.removeItem("cleared_asteroids"); } catch {}
 
@@ -135,7 +123,6 @@ export async function initPlayer() {
       resources: { ...DEFAULT_RESOURCES, ...saved.resources },
       cargo:     { ...EMPTY_RES_MAP,     ...saved.cargo     },
       workshop:  saved.workshop ?? [],
-
       reservedResources: { ...EMPTY_RES_MAP, ...(saved.reservedResources ?? {}) },
       reservedExpiresAt: saved.reservedExpiresAt ?? 0,
     };
@@ -155,12 +142,17 @@ export function getExpedition()  { return state.expedition ?? null; }
 export function getFuel()        { return state.fuel ?? 0; }
 export function getFuelStorage() { return state.fuelStorage ?? 0; }
 export function getCredits()     { return state.credits ?? 0; }
-export function getInventory()   { return state?.inventory ?? []; }
+export function getInventory() { 
+  const all = state?.inventory ?? [];
+  const wsIds = new Set((state?.workshop ?? []).map(i => i.id));
+  return all.filter(i => !wsIds.has(i.id)); 
+}
+export function getRawInventory() { return state?.inventory ?? []; } // Для внутренних нужд (если надо)
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RESERVATION SYSTEM
 // ─────────────────────────────────────────────────────────────────────────────
-
 function nowMs() { return Date.now(); }
 
 function reservedIsEmpty(map) {
@@ -185,6 +177,7 @@ async function cleanupExpiredReservation(persistIfCleared = false) {
 
   renderResources();
   try { if (typeof window._renderForge === "function") window._renderForge(); } catch {}
+
   return true;
 }
 
@@ -210,10 +203,10 @@ export function getResources() {
   return getAvailableResources();
 }
 
-export async function reserveResources(cost, ttlMs = 3 * 60 * 1000) {
+export async function reserveResources(cost, ttlMs = 3  *60*  1000) {
   await cleanupExpiredReservation(true);
-
   const available = getAvailableResources();
+
   for (const [k, v] of Object.entries(cost ?? {})) {
     if (v <= 0) continue;
     if ((available[k] ?? 0) < v) return false;
@@ -240,8 +233,8 @@ export async function reserveResources(cost, ttlMs = 3 * 60 * 1000) {
 
 export async function commitReservedResources(cost) {
   await cleanupExpiredReservation(true);
-
   const resv = getReservedResources();
+
   for (const [k, v] of Object.entries(cost ?? {})) {
     if (v <= 0) continue;
     if ((resv[k] ?? 0) < v) return false;
@@ -269,8 +262,8 @@ export async function commitReservedResources(cost) {
 
 export async function releaseReservedResources(cost) {
   await cleanupExpiredReservation(true);
-
   const resv = getReservedResources();
+
   for (const [k, v] of Object.entries(cost ?? {})) {
     if (v <= 0) continue;
     resv[k] = Math.max(0, (resv[k] ?? 0) - v);
@@ -292,7 +285,6 @@ export async function releaseReservedResources(cost) {
 // ─────────────────────────────────────────────────────────────────────────────
 // EFFECTS (multipliers/adds)
 // ─────────────────────────────────────────────────────────────────────────────
-
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
 function effectiveMult(rawMult, power) {
@@ -347,7 +339,6 @@ function getEffectAdd(key) {
 // ─────────────────────────────────────────────────────────────────────────────
 // CAPS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function capSpeedMult(m)        { return clamp(m, 0.15, 18.0); }
 function capCapacityMult(m)     { return clamp(m, 0.25, 100.0); }
 function capCompressMult(m)     { return clamp(m, 0.35, 40.0); }
@@ -356,6 +347,7 @@ function capFlightEffMult(m)    { return clamp(m, 0.35, 40.0); }
 function capCompactMult(m)      { return clamp(m, 0.35, 40.0); }
 function capYieldMult(m)        { return clamp(m, 0.25, 40.0); }
 function capGuardStealthMult(m) { return clamp(m, 0.25, 50.0); }
+
 // ── Боевые капы ──────────────────────────────────────────────
 function capDamageMult(m)       { return clamp(m, 0.10, 20.0); }
 function capPierceMult(m)       { return clamp(m, 0.10, 20.0); }
@@ -363,42 +355,33 @@ function capPierceMult(m)       { return clamp(m, 0.10, 20.0); }
 // ─────────────────────────────────────────────────────────────────────────────
 // SHIP derived
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function getFuelCapacity() {
   const mult = capCapacityMult(getEffectMult("fuel_tank_mult"));
   return Math.max(Math.round(SHIP.baseFuelCapacity * mult), 50);
 }
-
 export function getCargoCapacity() {
   const mult = capCapacityMult(getEffectMult("cargo_capacity_mult"));
   return Math.max(Math.round(SHIP.baseCargoCapacity * mult), 50);
 }
-
 export function getFuelMassMultiplier() {
   const compress = capCompressMult(getEffectMult("fuel_compress_mult"));
   return 1 / compress;
 }
-
 export function getFuelEfficiencyMultiplier() {
   return capEfficiencyMult(getEffectMult("fuel_efficiency_mult"));
 }
-
 export function getFuelFlightEfficiencyMultiplier() {
   return capFlightEffMult(getEffectMult("fuel_flight_efficiency_mult"));
 }
-
 export function getCargoCompactMultiplier() {
   return capCompactMult(getEffectMult("cargo_compact_mult"));
 }
-
 export function getMiningYieldMultiplier() {
   return capYieldMult(getEffectMult("mining_yield_mult"));
 }
-
 export function getGuardStealthMultiplier() {
   return capGuardStealthMult(getEffectMult("guard_stealth_mult"));
 }
-
 export function getAutopilotGuardIgnoreChance() {
   return clamp(getEffectAdd("autopilot_guard_ignore_chance_add"), 0, 60);
 }
@@ -459,10 +442,8 @@ export function getCloakDurationAdd() {
 // ─────────────────────────────────────────────────────────────────────────────
 // CARGO MASS
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function getCargoMass() {
   const cargo = state.cargo;
-
   let sum = Object.entries(cargo).reduce((s, [res, amt]) => {
     return s + (amt ?? 0) * (RESOURCE_WEIGHT[res] ?? 1);
   }, 0);
@@ -479,18 +460,15 @@ export function getCargoUsed() {
 
 export function getTotalShipMass() {
   let mass = SHIP.baseShipMass;
-
   for (const item of getEquippedFromInventory()) mass += item.weight ?? 0;
-
-  mass += getFuel() * SHIP.fuelDensityTonPerL * getFuelMassMultiplier();
+  mass += getFuel()  *SHIP.fuelDensityTonPerL*  getFuelMassMultiplier();
   mass += getCargoMass();
-
   return Math.max(mass, 1);
 }
 
 export function calcFuelForFlight(distance, extraCargoMass = 0) {
   const mass = getTotalShipMass() + (Number(extraCargoMass) || 0);
-  const base = distance * mass * SHIP.fuelPerDistPerTon;
+  const base = distance  *mass*  SHIP.fuelPerDistPerTon;
   const eff  = getFuelFlightEfficiencyMultiplier();
   return base / Math.max(0.05, eff);
 }
@@ -512,20 +490,17 @@ export function getFuelGenPerHour() {
       gen += Math.min(Math.max(parseFloat(effect.value) || 0, 0), 20) * power;
     }
   }
-
   return Math.max(0, gen);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SPEED multipliers
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function getFlightSpeedMultiplier()  { return capSpeedMult(getEffectMult("flight_speed_mult")); }
 export function getReturnSpeedMultiplier()  { return capSpeedMult(getEffectMult("return_speed_mult")); }
 
 export function getMiningSpeedMultiplier() {
   let mult = capSpeedMult(getEffectMult("mining_speed_mult"));
-
   for (const item of getEquippedFromInventory()) {
     const power  = item.original ? 1.0 : (item.echoPower ?? 0.6);
     const effect = item?.specialEffect;
@@ -534,7 +509,6 @@ export function getMiningSpeedMultiplier() {
       mult *= (1 + pct / 100);
     }
   }
-
   return capSpeedMult(mult);
 }
 
@@ -545,7 +519,7 @@ export function getMiningSpeedBonus() { return (getMiningSpeedMultiplier() - 1) 
 export function calcFlightTime(distance, speedMult, shipMass) {
   const m           = Math.max(0.05, Number(speedMult) || 1);
   const massPenalty = Math.min((shipMass - SHIP.baseShipMass) * 0.005, 0.7);
-  const effective   = SHIP.baseSpeed * m * (1 - massPenalty);
+  const effective   = SHIP.baseSpeed  *m*  (1 - massPenalty);
   const speed       = Math.max(effective, SHIP.baseSpeed * 0.05);
   return Math.round(distance / speed);
 }
@@ -553,7 +527,6 @@ export function calcFlightTime(distance, speedMult, shipMass) {
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTOPILOT / SHIELD / AI DRILL
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function getAutopilotCycles() {
   let total = 0;
   for (const item of getEquippedFromInventory()) {
@@ -566,7 +539,6 @@ export function getAutopilotCycles() {
 }
 
 const BASE_REFLECT_POWER = 100;
-
 export function getReflectPower() {
   let bonus = 0;
   for (const item of getEquippedFromInventory()) {
@@ -627,7 +599,6 @@ export function getCombatStats() {
 // ─────────────────────────────────────────────────────────────────────────────
 // FUEL (tank)
 // ─────────────────────────────────────────────────────────────────────────────
-
 function rerenderMiningIfMounted() {
   try { if (typeof window._renderAsteroids === "function") window._renderAsteroids(); } catch {}
 }
@@ -654,7 +625,6 @@ export async function spendFuel(amount) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FUEL storage + автозаправка
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function addFuelToStorage(amount) {
   state.fuelStorage = Math.max(0, (state.fuelStorage ?? 0) + amount);
   await updatePlayer(uid, { fuelStorage: state.fuelStorage });
@@ -667,14 +637,14 @@ export async function autoRefuelFromStorage() {
   const capacity = getFuelCapacity();
   const current  = getFuel();
   const need     = Math.max(0, capacity - current);
-  const fromStor = Math.min(need, getFuelStorage());
 
+  const fromStor = Math.min(need, getFuelStorage());
   if (fromStor <= 0) return 0;
 
   state.fuel        = current + fromStor;
   state.fuelStorage = getFuelStorage() - fromStor;
-
   await updatePlayer(uid, { fuel: state.fuel, fuelStorage: state.fuelStorage });
+
   renderFuel();
   rerenderMiningIfMounted();
   return fromStor;
@@ -719,6 +689,7 @@ export async function autoProduceFuelFromIsotopes() {
   const isotopeNeeded = Math.ceil(need / ISOTOPE_TO_FUEL_RATIO);
   const isotopeUsed   = Math.min(isotopeNeeded, isotopes);
   const fuelProduced  = isotopeUsed * ISOTOPE_TO_FUEL_RATIO;
+
   if (fuelProduced <= 0) return null;
 
   state.resources.isotopes = Math.max(0, isotopes - isotopeUsed);
@@ -783,13 +754,11 @@ export async function withdrawFuelForSale(amount) {
 // ─────────────────────────────────────────────────────────────────────────────
 // CREDITS
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function addCredits(amount) {
   state.credits = (state.credits ?? 0) + amount;
   await updatePlayer(uid, { credits: state.credits });
   renderCredits();
 }
-
 export async function spendCredits(amount) {
   if ((state.credits ?? 0) < amount) return false;
   state.credits = Math.max(0, (state.credits ?? 0) - amount);
@@ -801,7 +770,6 @@ export async function spendCredits(amount) {
 // ─────────────────────────────────────────────────────────────────────────────
 // RESOURCES
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function addResources(delta) {
   for (const [k, v] of Object.entries(delta)) {
     if (k in state.resources)
@@ -814,18 +782,16 @@ export async function addResources(delta) {
 
 export async function spendResources(cost) {
   await cleanupExpiredReservation(true);
-
   const available = getAvailableResources();
+
   for (const [k, v] of Object.entries(cost ?? {})) {
     if (v <= 0) continue;
     if ((available[k] ?? 0) < v) return false;
   }
-
   for (const [k, v] of Object.entries(cost ?? {})) {
     if (v <= 0) continue;
     state.resources[k] = Math.max(0, (state.resources[k] ?? 0) - v);
   }
-
   await updatePlayer(uid, { resources: state.resources });
   renderResources();
   rerenderForgeIfMounted();
@@ -835,11 +801,11 @@ export async function spendResources(cost) {
 // ─────────────────────────────────────────────────────────────────────────────
 // CARGO
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function addToCargo(resource, amount) {
   const capacity = getCargoCapacity();
   const used     = getCargoUsed();
   const weight   = RESOURCE_WEIGHT[resource] ?? 1;
+
   const canFit   = Math.max(0, Math.floor((capacity - used) / weight));
   const actual   = Math.min(amount, canFit);
 
@@ -861,6 +827,7 @@ export async function unloadCargo() {
   }
   state.cargo = { ...EMPTY_RES_MAP };
   await updatePlayer(uid, { resources: state.resources, cargo: state.cargo });
+
   renderResources();
   renderCargo();
   rerenderForgeIfMounted();
@@ -874,7 +841,6 @@ export async function clearCargo() {
 
 export async function jettisonCargo(resource, amount) {
   if (!state?.cargo || !(resource in state.cargo)) return 0;
-
   const a    = Math.max(0, Math.floor(amount || 0));
   const have = state.cargo[resource] ?? 0;
   const drop = Math.min(a, have);
@@ -902,7 +868,6 @@ export async function jettisonAllCargo() {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPEDITION
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function setExpedition(data) {
   state.expedition = data;
   await updatePlayer(uid, { expedition: data });
@@ -916,7 +881,6 @@ export async function setExpedition(data) {
 // ─────────────────────────────────────────────────────────────────────────────
 // INVENTORY
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function addToInventory(artifact) {
   if (!state.inventory) state.inventory = [];
   state.inventory.push(artifact);
@@ -952,7 +916,6 @@ export async function jettisonInventoryItem(itemId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // NAME
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function setPlayerName(name) {
   state.name = name;
   localStorage.setItem("pilot_name", name);
@@ -962,7 +925,6 @@ export async function setPlayerName(name) {
 // ─────────────────────────────────────────────────────────────────────────────
 // EQUIP (только на базе)
 // ─────────────────────────────────────────────────────────────────────────────
-
 window._equipFromInventory = function(itemId) {
   const exp = getExpedition();
   if (exp) {
@@ -973,6 +935,7 @@ window._equipFromInventory = function(itemId) {
   import("./combat.js").then(({ equipItem, equippedItems }) => {
     const item = getInventory().find(i => i.id === itemId);
     if (!item) return;
+
     if (equippedItems.some(e => e?.id === itemId)) return;
 
     const freeSlot = equippedItems.findIndex(e => e === null);
@@ -980,6 +943,7 @@ window._equipFromInventory = function(itemId) {
       showToast("Все 4 слота заняты. Снимите артефакт.", "warning");
       return;
     }
+
     equipItem(item, freeSlot);
     normalizeFuelOnBase();
     renderInventory();
@@ -989,11 +953,18 @@ window._equipFromInventory = function(itemId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // WORKSHOP
 // ─────────────────────────────────────────────────────────────────────────────
-
 window._sendToWorkshop = async function(itemId) {
   const exp = getExpedition();
   if (exp) {
     showToast("⚓ Отправка в мастерскую доступна только на базе.", "warning");
+    return;
+  }
+  
+  // Проверяем, не надет ли предмет
+  const { getEquippedItems } = await import("./combat.js");
+  const isEq = getEquippedItems().some(i => i && i.id === itemId);
+  if (isEq) {
+    showToast("⚠️ Сначала снимите модуль с корабля!", "warning");
     return;
   }
 
@@ -1004,7 +975,6 @@ window._sendToWorkshop = async function(itemId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // NEWBIE HINT
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function checkNewPlayerHint() {
   const r     = state?.resources ?? {};
   const total = Object.values(r).reduce((s, v) => s + v, 0);
@@ -1032,14 +1002,15 @@ export function checkNewPlayerHint() {
 // ─────────────────────────────────────────────────────────────────────────────
 // UI RENDER
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function renderResources() {
   if (!state) return;
   const r = getResources();
+
   const set = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.textContent = Math.floor(val ?? 0);
   };
+
   set("res-isotopes", r.isotopes);
   set("res-minerals", r.minerals);
   set("res-metals",   r.metals);
@@ -1059,8 +1030,8 @@ export function renderFuel() {
 
   const label = document.getElementById("fuel-label");
   if (label) {
-    const genStr     = gen > 0 ? ` +${gen.toFixed(1)}/ч` : "";
-    const storageStr = storage > 0 ? ` · 🛢️ склад: ${Math.round(storage)}л` : "";
+    const genStr     = gen > 0 ?  `+${gen.toFixed(1)}/ч` : "";
+    const storageStr = storage > 0 ?  `· 🛢️ склад: ${Math.round(storage)}л` : "";
     label.textContent = `⛽ ${Math.round(fuel)}/${Math.round(capacity)}л${genStr}${storageStr}`;
   }
 }
@@ -1077,8 +1048,8 @@ export function renderCargo() {
   const used     = getCargoUsed();
   const capacity = getCargoCapacity();
   const pct      = Math.min(used / capacity * 100, 100);
-  const cargo    = state.cargo;
 
+  const cargo    = state.cargo;
   const cargoLines = Object.entries(cargo)
     .filter(([, v]) => v > 0)
     .map(([k, v]) => `${resIcon(k)} ${v}`)
@@ -1130,7 +1101,7 @@ export function renderInventory() {
     list.innerHTML = cargoManager + items.map(item => {
       const isEquipped = equippedIds.has(item.id);
       const isChimera  = item.isChimera ?? false;
-      const weightStr  = item.weight ? ` · ⚖️ ${item.weight}т` : "";
+      const weightStr  = item.weight ?  `· ⚖️ ${item.weight}т` : "";
 
       const badge = isChimera
         ? `<span class="chimera-badge">ХИМЕРА</span>`
@@ -1149,7 +1120,6 @@ export function renderInventory() {
             ${rarityBadge}
             ${isEquipped ? '<span class="equipped-indicator">⚔️ Экипирован</span>' : ""}
           </div>
-
           <div class="artifact-name">${escHtml(item.name)}</div>
           <div class="artifact-meta-line">${weightStr}</div>
           <div class="artifact-desc">${escHtml(item.description ?? "")}</div>
@@ -1176,7 +1146,7 @@ export function renderInventory() {
                       onclick="window._sendToWorkshop('${item.id}')">
                 📦 В мастерскую
               </button>
-            ` : `
+             `:` 
               <button class="btn-equip" disabled title="В космосе нельзя экипировать/переставлять.">
                 ⚓ Только на базе
               </button>
@@ -1195,7 +1165,6 @@ export function renderInventory() {
 // ─────────────────────────────────────────────────────────────────────────────
 // JETTISON UI handlers
 // ─────────────────────────────────────────────────────────────────────────────
-
 window._dumpCargo = async function(res) {
   const exp = getExpedition();
   if (!exp) { showToast("Сбрасывать груз можно только в экспедиции.", "warning"); return; }
@@ -1255,7 +1224,6 @@ window._jettisonItem = async function(itemId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function rarityLabel(r) {
   return {
     bad:      "Плохой",
@@ -1297,7 +1265,6 @@ function escHtml(str) {
 // ─────────────────────────────────────────────────────────────────────────────
 // EFFECTS DISPLAY
 // ─────────────────────────────────────────────────────────────────────────────
-
 const PERCENT_EFFECTS = new Set([
   "fuel_tank_mult", "cargo_capacity_mult", "flight_speed_mult",
   "return_speed_mult", "mining_speed_mult", "fuel_compress_mult",
@@ -1334,6 +1301,7 @@ const EFFECT_UNITS = {
   autopilot_cycles_add:               { label: "Автоциклы добычи",             unit: "цикл." },
   dodge_chance_add:                   { label: "Мощность энергощита",          unit: "щит" },
   ore_quality_chance_add:             { label: "Шанс апгрейда руды",           unit: "%" },
+
   // ── Боевые tier-5 ─────────────────────────────────────────
   rocket_salvo_mult:                  { label: "Мощность ракетного залпа",     unit: "%" },
   rocket_ammo_add:                    { label: "Боезапас ракет",               unit: "шт." },
@@ -1364,6 +1332,7 @@ function formatEffectSymbol(effectKey, effectiveVal) {
   if (!isPercent) return null;
 
   let isPenalty, rawPct;
+
   if (effectKey.endsWith("_mult")) {
     isPenalty = effectiveVal < 1;
     rawPct    = Math.abs((effectiveVal - 1) * 100);
@@ -1453,7 +1422,6 @@ export function renderEffectsDisplay(item) {
 // ─────────────────────────────────────────────────────────────────────────────
 // TOAST
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function showToast(text, type = "info") {
   const notif = document.createElement("div");
   notif.className = "drop-notification";
@@ -1461,6 +1429,7 @@ export function showToast(text, type = "info") {
     type === "warning" ? "var(--red)"
   : type === "success" ? "var(--green)"
   : "var(--accent)";
+
   notif.innerHTML = `
     <div class="drop-notif-title" style="color:${
       type === "warning" ? "var(--red)"
@@ -1468,7 +1437,9 @@ export function showToast(text, type = "info") {
     : "var(--accent2)"}">
       ${escHtml(text)}
     </div>`;
+
   document.body.appendChild(notif);
+
   requestAnimationFrame(() => notif.classList.add("drop-notif-visible"));
   setTimeout(() => {
     notif.classList.remove("drop-notif-visible");
@@ -1479,7 +1450,6 @@ export function showToast(text, type = "info") {
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV-хуки (для deck-генератора и консоли)
 // ─────────────────────────────────────────────────────────────────────────────
-
 window.CF_GET_STATE = () => state;
 window.CF_GET_ITEM  = (id) => state?.inventory?.find(it => it?.id === id);
 Object.defineProperty(window, "CF_STATE", { get: () => state });

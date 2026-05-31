@@ -19,21 +19,23 @@ import {
   distDamageMult,
 } from "./combat_alpha_engine.js";
 
-const CACHE_KEY = "combat_cards_cache_v2";
+const CACHE_KEY = "combat_cards_cache_v3";
 
 // ─────────────────────────────────────────────────────────────
 // utils
 // ─────────────────────────────────────────────────────────────
-
 function esc(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
 function safeJsonParse(str, fallback) {
   try { const v = JSON.parse(str); return (v ?? fallback); } catch { return fallback; }
 }
+
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 function pct01(x) { return `${Math.round(clamp(x, 0, 1) * 100)}%`; }
+
 function bar(val, max, color = "var(--accent)") {
   const pct = clamp(val / Math.max(1, max) * 100, 0, 100);
   return `<div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin:3px 0 6px;overflow:hidden;">
@@ -96,13 +98,16 @@ function loadDeckFromCache(equippedItems) {
   const cache = safeJsonParse(localStorage.getItem(CACHE_KEY), {});
   const ids   = equippedItems.map(it => it.id);
   const deck  = [];
+
   for (const id of ids) if (cache[id]) deck.push(normalizeCardLite(cache[id]));
+
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
       const k = comboKey(ids[i], ids[j]);
       if (cache[k]) deck.push(normalizeCardLite(cache[k]));
     }
   }
+
   return deck;
 }
 
@@ -124,13 +129,10 @@ function engineFatigueMult(state) {
 // ─────────────────────────────────────────────────────────────
 // Chaos flash overlay
 // ─────────────────────────────────────────────────────────────
-
 let _chaosFlashTimeout = null;
 
 function showChaosFlash(chaos) {
-  // убираем предыдущий
   clearChaosFlash();
-
   if (!chaos) return;
 
   const chaosMult   = Number(chaos.mult);
@@ -140,7 +142,6 @@ function showChaosFlash(chaos) {
   const emoji       = isHigh ? "⚡🔥" : isBad ? "⚡💀" : "⚡";
   const borderColor = isHigh ? "rgba(255,152,0,0.6)" : isBad ? "rgba(239,83,80,0.6)" : "rgba(206,147,216,0.4)";
 
-  // создаём overlay поверх всей модалки
   const overlay = document.createElement("div");
   overlay.id = "combat-chaos-flash";
   overlay.style.cssText = `
@@ -150,8 +151,9 @@ function showChaosFlash(chaos) {
     display: flex;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
+    background: rgba(0,0,0,0.5);
     animation: chaosFlashIn 0.15s ease-out;
+    pointer-events: auto;
   `;
 
   overlay.innerHTML = `
@@ -170,38 +172,33 @@ function showChaosFlash(chaos) {
       <div style="font-size: 13px; font-weight: 900; color: ${color}; letter-spacing: 2px; margin-bottom: 12px;">
         CHAOS СРАБОТАЛ
       </div>
-      <div style="font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-        ${esc(chaos.type)} ×${chaosMult.toFixed(2)}
+      <div style="font-size: 16px; font-weight: 700; margin-bottom: 10px; color: #fff;">
+        ${esc(actionName(chaos.type))} ×${chaosMult.toFixed(2)}
       </div>
-      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 12px; line-height: 1.4;">
+      <div style="font-size: 14px; opacity: 0.95; margin-bottom: 16px; line-height: 1.5; color: #ddd;">
         ${esc(chaos.result)}
       </div>
       ${chaos.chaos_reason ? `
         <div style="
-          font-size: 11px;
+          font-size: 12px;
           color: var(--muted, #888);
           font-style: italic;
           border-top: 1px solid rgba(255,255,255,0.1);
-          padding-top: 10px;
-          margin-top: 4px;
+          padding-top: 12px;
+          margin-bottom: 16px;
           line-height: 1.4;
         ">
           «${esc(chaos.chaos_reason)}»
         </div>
       ` : ""}
+      <button id="btn-chaos-ok" class="btn-primary" style="width: 100%; font-size: 14px; padding: 10px; margin-top: 8px;">ПОНЯТНО</button>
     </div>
   `;
 
   document.body.appendChild(overlay);
 
-  // убираем через 2.2 секунды
-  _chaosFlashTimeout = setTimeout(() => {
-    clearChaosFlash();
-  }, 2200);
-
-  // клик убирает досрочно
-  overlay.style.pointerEvents = "auto";
-  overlay.addEventListener("click", () => clearChaosFlash(), { once: true });
+  const btn = overlay.querySelector("#btn-chaos-ok");
+  btn.addEventListener("click", () => clearChaosFlash(), { once: true });
 }
 
 function clearChaosFlash() {
@@ -215,7 +212,6 @@ function clearChaosFlash() {
 // ─────────────────────────────────────────────────────────────
 // CSS для анимаций chaos
 // ─────────────────────────────────────────────────────────────
-
 function injectChaosStyles() {
   if (document.getElementById("chaos-flash-style")) return;
   const st = document.createElement("style");
@@ -236,7 +232,6 @@ function injectChaosStyles() {
 // ─────────────────────────────────────────────────────────────
 // Action display + preview
 // ─────────────────────────────────────────────────────────────
-
 const ACTION_SHORT = {
   ATTACK_KINETIC:      "Кинетический залп",
   ATTACK_THERMAL:      "Термический прожиг",
@@ -300,30 +295,30 @@ function enemyModulesDown(state) {
 function bribeCostApprox(state, mult) {
   const base = Math.round(15_000 + (state.enemy.maxShield + state.enemy.maxHull) * 450);
   const m    = clamp(Number(mult ?? 1), 0.6, 2.5);
-  return Math.round(base * (0.85 + 0.25 * m));
+  return Math.round(base  *(0.85 + 0.25*  m));
 }
 
 function maneuverGivesEscape(state, a, dir) {
   const type      = String(a?.type || "");
   const mult      = clamp(Number(a?.mult ?? 1), 0.6, 2.5);
   const eff       = state?.player?._eff || {};
-  const speedMult = clamp(eff.flight_speed_mult ?? 1, 0.15, 18.0);
+  const speedMult = Math.sqrt(clamp(eff.flight_speed_mult ?? 1, 0.5, 5.0));
   const fatMult   = engineFatigueMult(state);
 
   if (type === "DISTANCE_PUSH") {
     if (dir === "toward") return false;
-    return clamp(state.distance + 20 * mult * speedMult * fatMult, LIMITS.DIST_MIN, LIMITS.DIST_MAX) >= LIMITS.ESCAPE_DIST;
+    return clamp(state.distance + 20  *mult*  speedMult * fatMult, LIMITS.DIST_MIN, LIMITS.DIST_MAX) >= LIMITS.ESCAPE_DIST;
   }
   if (type === "FULL_BURN") {
     if (dir === "toward") return false;
-    return clamp(state.distance + 35 * mult * speedMult * fatMult, LIMITS.DIST_MIN, LIMITS.DIST_MAX) >= LIMITS.ESCAPE_DIST;
+    return clamp(state.distance + 35  *mult*  speedMult * fatMult, LIMITS.DIST_MIN, LIMITS.DIST_MAX) >= LIMITS.ESCAPE_DIST;
   }
   if (type === "DRIFT_SILENT" && dir !== "toward") {
     const stealthMult = clamp(eff.guard_stealth_mult ?? 1, 0.25, 50.0);
     const cloakBonus  = 1 + (eff.cloak_duration_add ?? 0) / 10;
     const distB       = stealthDistBonus(state.distance);
-    const nextS = clamp(state.stealth + 20 * mult * stealthMult * cloakBonus * distB, 0, 100);
-    const nextD = clamp(state.distance + 10 * mult * speedMult, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
+    const nextS = clamp(state.скрытность + 20  *mult*  stealthMult  *cloakBonus*  distB, 0, 100);
+    const nextD = clamp(state.distance + 10  *mult*  speedMult, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
     if (nextD >= LIMITS.ESCAPE_DIST) return true;
     if ((state.stealthLock ?? 0) >= 1 && nextS >= stealthThresholdAtDist(nextD)) return true;
   }
@@ -334,20 +329,23 @@ function actionGivesEscapeNow(state, a) {
   if (DIRECTIONAL_ACTIONS.has(String(a?.type || ""))) {
     return maneuverGivesEscape(state, a, "away");
   }
+
   const type = String(a?.type || "");
   const mult = clamp(Number(a?.mult ?? 1), 0.6, 2.5);
   const eff  = state?.player?._eff || {};
+
   if (["SENSOR_JAM", "DECOY_DUMP", "DATA_SPOOF"].includes(type)) {
     if ((state.stealthLock ?? 0) >= 1 && state.distance < LIMITS.ESCAPE_DIST) {
       const s =
         type === "SENSOR_JAM"
-          ? 25 * mult * (1 + (eff.sensor_jam_add ?? 0) / 50) * stealthDistBonus(state.distance)
+          ? 25  *mult*  (1 + (eff.sensor_jam_add ?? 0) / 50) * stealthDistBonus(state.distance)
           : type === "DECOY_DUMP"
-          ? (15 * mult + (eff.cloak_duration_add ?? 0) * 2) * stealthDistBonus(state.distance)
-          : 15 * mult * stealthDistBonus(state.distance) * 0.9;
-      if (clamp(state.stealth + s, 0, 100) >= stealthThresholdAtDist(state.distance)) return true;
+          ? (15  *mult + (eff.cloak_duration_add ?? 0)*  2) * stealthDistBonus(state.distance)
+          : 15  *mult*  stealthDistBonus(state.distance) * 0.9;
+      if (clamp(state.скрытность + s, 0, 100) >= stealthThresholdAtDist(state.distance)) return true;
     }
   }
+
   return false;
 }
 
@@ -356,12 +354,15 @@ function previewSocialLine(state, type, mult) {
     OFFER_BRIBE:         () => 2.0 * mult,
     BROADCAST_PLEA:      () => 1.2 * mult,
     NEGOTIATE_DELAY:     () => 1.0 * mult,
-    THREATEN_DETONATION: () => 2.0 * mult * (1 + (state.detonationRisk ?? 0) / 100),
-    FAKE_MELTDOWN:       () => 3.5 * mult * (1 + (state.detonationRisk ?? 0) / 100),
-    SIGNAL_BLUFF:        () => 1.0 * mult * (1 + (state.stealth ?? 0) / 100),
+    THREATEN_DETONATION: () => 2.0  *mult*  (1 + (state.detonationRisk ?? 0) / 100),
+    FAKE_MELTDOWN:       () => 3.5  *mult*  (1 + (state.detonationRisk ?? 0) / 100),
+    SIGNAL_BLUFF:        () => 1.0  *mult*  (1 + (state.stealth ?? 0) / 100),
   }[type];
+
   if (!baseByType) return `${actionName(type)}: (соц)`;
+
   const basePts = baseByType();
+
   if (type === "SIGNAL_BLUFF") {
     const p = previewSocialGain(state, "SIGNAL_BLUFF", basePts * 0.60, "plea");
     const t = previewSocialGain(state, "SIGNAL_BLUFF", basePts * 0.40, "threat");
@@ -376,8 +377,9 @@ function previewSocialLine(state, type, mult) {
     const cost   = bribeCostApprox(state, mult);
     const haveC  = Math.round(state.economy?.credits ?? 0);
     const canPay = haveC >= cost ? "✅" : "⚠️";
-    return `${actionName(type)}: +${g.toFixed(1)} plea · ~${cost}cr ${canPay}`;
+    return `${actionName(type)}: +${g.toFixed(1)} убежд. · ~${cost}cr ${canPay}`;
   }
+
   const g = previewSocialGain(state, type, basePts, "plea");
   return `${actionName(type)}: +${g.toFixed(1)} plea`;
 }
@@ -389,7 +391,7 @@ function previewActionLine(state, a, dir = "away") {
   const speedMult = clamp(eff.flight_speed_mult ?? 1, 0.15, 18.0);
   const fatMult   = engineFatigueMult(state);
   const fatPct    = Math.round(state.engineFatigue ?? 0);
-  const fatSuffix = fatPct > 0 ? ` · уст.двиг ${fatPct}%` : "";
+  const fatSuffix = fatPct > 0 ?  `· перегрев ${fatPct}%` : "";
 
   const hitChance = (t) => pct01(previewPlayerHitChance(state, t));
 
@@ -401,70 +403,73 @@ function previewActionLine(state, a, dir = "away") {
 
   switch (type) {
     case "ATTACK_KINETIC": {
-      const { dmg, dm } = dmgPreview(9 * mult * (eff.kinetic_damage_mult ?? 1), type);
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}) · шанс ${hitChance(type)}`;
+      const { dmg, dm } = dmgPreview(7 * mult *  (eff.kinetic_damage_mult ?? 1), type);
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}) · шанс ${hitChance(type)}`;
     }
     case "ATTACK_THERMAL": {
-      const { dmg, dm } = dmgPreview(7 * mult * (eff.thermal_damage_mult ?? 1), type);
+      const { dmg, dm } = dmgPreview(5 * mult *  (eff.thermal_damage_mult ?? 1), type);
       const burn = Math.max(0, (eff.thermal_burn_add ?? 0) + 2.5 * mult);
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}) + burn +${burn.toFixed(1)} · шанс ${hitChance(type)}`;
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}) + горение +${burn.toFixed(1)} · шанс ${hitChance(type)}`;
     }
     case "ATTACK_SHRAPNEL": {
-      const { dmg, dm } = dmgPreview(6 * mult * (eff.rocket_salvo_mult ?? 1), type);
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}) · без промаха`;
+      const { dmg, dm } = dmgPreview(4 * mult *  (eff.rocket_salvo_mult ?? 1), type);
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}) · без промаха`;
     }
     case "ROCKET_SALVO": {
-      const { dmg, dm } = dmgPreview(14 * mult * (eff.rocket_salvo_mult ?? 1), type);
-      const ammoBonus   = Math.floor(eff.rocket_ammo_add ?? 0);
-      const ammoStr     = ammoBonus > 0 ? ` + доп. залп (ammo ×${ammoBonus})` : "";
+      const { dmg, dm } = dmgPreview(10 * mult *  (eff.rocket_salvo_mult ?? 1), type);
+      const ракетBonus   = Math.floor(eff.rocket_ракет_add ?? 0);
+      const ракетStr     = ракетBonus > 0 ?  `+ доп. залп (ракет ×${ракетBonus})` : "";
       const hint        = state.distance < 35 ? " ⚠️ близко" : state.distance >= 65 ? " ✅ оптимум" : "";
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}${hint})${ammoStr}`;
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}${hint})${ракетStr}`;
     }
     case "PIERCE": {
-      const { dmg, dm } = dmgPreview(6 * mult * (eff.armor_pierce_mult ?? 1), type);
+      const { dmg, dm } = dmgPreview(5 * mult * (eff.armor_pierce_mult ?? 1), type);
       const pr = clamp(0.40 + ((eff.armor_pierce_mult ?? 1) - 1) * 0.20, 0.40, 0.85);
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}, ${Math.round(pr * 100)}% в hull) · шанс ${hitChance(type)}`;
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}, ${Math.round(pr * 100)}% в hull) · шанс ${hitChance(type)}`;
     }
     case "FOCUS_FIRE": {
-      const { dmg, dm } = dmgPreview(12 * mult * (eff.kinetic_damage_mult ?? 1), type);
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}) · шанс ${hitChance(type)}`;
+      const { dmg, dm } = dmgPreview(9 * mult *  (eff.kinetic_damage_mult ?? 1), type);
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}) · шанс ${hitChance(type)}`;
     }
     case "FUEL_IGNITE": {
-      const { dmg, dm } = dmgPreview(5 * mult * (eff.thermal_damage_mult ?? 1), type);
-      return `${actionName(type)}: ~${dmg} урона (dist×${dm.toFixed(2)}) + det +10% · шанс ${hitChance(type)}`;
+      const { dmg, dm } = dmgPreview(5  *mult*  (eff.thermal_damage_mult ?? 1), type);
+      return `${actionName(type)}: ~${dmg} урона (расст.×${dm.toFixed(2)}) + риск взрыва +10% · шанс ${hitChance(type)}`;
     }
+
     case "ATTACK_EMP":
       return `${actionName(type)}: враг ×0.8 точность на 2 раунда`;
     case "DISRUPT_SENSORS":
       return `${actionName(type)}: враг ×0.8 точность на 2 раунда`;
+
     case "SHIELD_REGEN": {
-      const add = Math.round(15 * mult * (eff.shield_mult ?? 1));
+      const add = Math.round(15  *mult*  (eff.shield_mult ?? 1));
       return `${actionName(type)}: +${add} щита`;
     }
     case "SHIELD_SPIKE": {
-      const add = Math.round(25 * mult * (eff.shield_mult ?? 1));
+      const add = Math.round(25  *mult*  (eff.shield_mult ?? 1));
       return `${actionName(type)}: +${add} щита (временно)`;
     }
     case "EMERGENCY_REPAIR": {
-      const add = Math.round(10 * mult * (eff.hp_mult ?? 1));
+      const add = Math.round(10  *mult*  (eff.hp_mult ?? 1));
       return `${actionName(type)}: +${add} обшивки`;
     }
     case "DAMAGE_CONTROL": {
-      const add = Math.round(6 * mult * (eff.hp_mult ?? 1));
-      return `${actionName(type)}: +${add} обшивки · det −5%`;
+      const add = Math.round(6  *mult*  (eff.hp_mult ?? 1));
+      return `${actionName(type)}: +${add} обшивки · риск взрыва −5%`;
     }
     case "HULL_BRACE":
       return `${actionName(type)}: следующий урон −50%`;
+
     case "DISTANCE_PUSH": {
-      const delta  = Math.round(20 * mult * speedMult * fatMult);
+      const delta  = Math.round(20  *mult*  speedMult * fatMult);
       const away   = clamp(state.distance + delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const toward = clamp(state.distance - delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const awayH  = away >= LIMITS.ESCAPE_DIST ? " 🚀" : "";
       return `${actionName(type)}: от врага +${delta}→${Math.round(away)}${awayH} · к врагу −${delta}→${Math.round(toward)}${fatSuffix}`;
     }
     case "FULL_BURN": {
-      const delta      = Math.round(35 * mult * speedMult * fatMult);
-      const shieldCost = Math.round(5 / Math.max(0.3, speedMult));
+      const delta      = Math.round(35  *mult*  speedMult * fatMult);
+      const shieldCost = Math.round(10 / Math.max(0.5, speedMult));
       const away       = clamp(state.distance + delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const toward     = clamp(state.distance - delta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const awayH      = away >= LIMITS.ESCAPE_DIST ? " 🚀" : "";
@@ -474,47 +479,49 @@ function previewActionLine(state, a, dir = "away") {
       const stealthMult = clamp(eff.guard_stealth_mult ?? 1, 0.25, 50.0);
       const cloakBonus  = 1 + (eff.cloak_duration_add ?? 0) / 10;
       const distB       = stealthDistBonus(state.distance);
-      const sAway       = Math.round(20 * mult * stealthMult * cloakBonus * distB);
-      const sToward     = Math.round(20 * mult * stealthMult * cloakBonus * distB * 1.3);
-      const dDelta      = Math.round(10 * mult * speedMult);
+      const sAway       = Math.round(20  *mult*  stealthMult  *cloakBonus*  distB);
+      const sToward     = Math.round(20  *mult*  stealthMult  *cloakBonus*  distB * 1.3);
+      const dDelta      = Math.round(10  *mult*  speedMult);
       const nextDAway   = clamp(state.distance + dDelta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const nextDToward = clamp(state.distance - dDelta, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       const needAway    = stealthThresholdAtDist(nextDAway);
       const awayH       = nextDAway >= LIMITS.ESCAPE_DIST ? " 🚀" : "";
-      return `${actionName(type)}: от stealth+${sAway}→${Math.round(state.stealth+sAway)}/${needAway}, dist+${dDelta}→${Math.round(nextDAway)}${awayH} · к stealth+${sToward}(lock заморожен), dist−${dDelta}→${Math.round(nextDToward)}`;
+      return `${actionName(type)}: от скрытность +${sAway}→${Math.round(state.скрытность +sAway)}/${needAway}, дист. +${dDelta}→${Math.round(nextDAway)}${awayH} · к скрытность +${sToward}(фиксация заморожена), дист. −${dDelta}→${Math.round(nextDToward)}`;
     }
     case "DISTANCE_PULL": {
-      const pull = Math.round(20 * mult * fatMult);
+      const pull = Math.round(20  *mult*  fatMult);
       const next = clamp(state.distance - pull, LIMITS.DIST_MIN, LIMITS.DIST_MAX);
       return `${actionName(type)}: −${pull} → ${Math.round(next)}${fatSuffix}`;
     }
+
     case "EVADE_SPIKE": {
       const e = clamp(
-        (15 * mult * speedMult) + (eff.dodge_chance_add ?? 0) * 0.25 + (eff.evade_charge_add ?? 0) * 3,
+        (15  *mult*  speedMult) + (eff.dodge_chance_add ?? 0)  *0.25 + (eff.evade_charge_add ?? 0)*  3,
         0, 85
       );
       return `${actionName(type)}: враг ×${(1 - e / 100).toFixed(2)} точность`;
     }
     case "SENSOR_JAM": {
-      const s    = Math.round(25 * mult * (1 + (eff.sensor_jam_add ?? 0) / 50) * stealthDistBonus(state.distance));
-      const nextS = clamp(state.stealth + s, 0, 100);
+      const s    = Math.round(25  *mult*  (1 + (eff.sensor_jam_add ?? 0) / 50) * stealthDistBonus(state.distance));
+      const nextS = clamp(state.скрытность + s, 0, 100);
       const need  = stealthThresholdAtDist(state.distance);
-      return `${actionName(type)}: stealth +${s} → ${Math.round(nextS)}/${need} · враг хуже видит`;
+      return `${actionName(type)}: скрытность +${s} → ${Math.round(nextS)}/${need} · враг хуже видит`;
     }
     case "DECOY_DUMP": {
-      const s    = Math.round((15 * mult + (eff.cloak_duration_add ?? 0) * 2) * stealthDistBonus(state.distance));
-      const nextS = clamp(state.stealth + s, 0, 100);
+      const s    = Math.round((15  *mult + (eff.cloak_duration_add ?? 0)*  2) * stealthDistBonus(state.distance));
+      const nextS = clamp(state.скрытность + s, 0, 100);
       const need  = stealthThresholdAtDist(state.distance);
-      return `${actionName(type)}: stealth +${s} → ${Math.round(nextS)}/${need} · враг пропускает ход`;
+      return `${actionName(type)}: скрытность +${s} → ${Math.round(nextS)}/${need} · враг пропускает ход`;
     }
     case "EMP_STUN":
       return `${actionName(type)}: враг пропускает ход`;
     case "DATA_SPOOF": {
-      const s    = Math.round(15 * mult * stealthDistBonus(state.distance) * 0.9);
-      const nextS = clamp(state.stealth + s, 0, 100);
+      const s    = Math.round(15  *mult*  stealthDistBonus(state.distance) * 0.9);
+      const nextS = clamp(state.скрытность + s, 0, 100);
       const need  = stealthThresholdAtDist(state.distance);
-      return `${actionName(type)}: stealth +${s} → ${Math.round(nextS)}/${need}`;
+      return `${actionName(type)}: скрытность +${s} → ${Math.round(nextS)}/${need}`;
     }
+
     case "OFFER_BRIBE":
     case "BROADCAST_PLEA":
     case "NEGOTIATE_DELAY":
@@ -522,6 +529,7 @@ function previewActionLine(state, a, dir = "away") {
     case "FAKE_MELTDOWN":
     case "SIGNAL_BLUFF":
       return previewSocialLine(state, type, mult);
+
     default:
       return `${actionName(type)}: (без модели)`;
   }
@@ -530,7 +538,6 @@ function previewActionLine(state, a, dir = "away") {
 // ─────────────────────────────────────────────────────────────
 // UI styles
 // ─────────────────────────────────────────────────────────────
-
 function injectSimStylesOnce() {
   if (document.getElementById("combat-sim-style")) return;
   const st = document.createElement("style");
@@ -540,7 +547,6 @@ function injectSimStylesOnce() {
     .combat-sim-controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
     .combat-sim-hud { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
     .combat-sim-main { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-
     .combat-sim-card {
       border:1px solid rgba(255,255,255,0.10);
       background:rgba(255,255,255,0.04);
@@ -559,7 +565,7 @@ function injectSimStylesOnce() {
     }
     .combat-sim-effect-lines { font-size:12px; line-height:1.35; margin:6px 0 8px; }
     .combat-sim-effect-lines > div { margin:4px 0; }
-
+    
     /* chaos preview на карте — минималистичный */
     .combat-sim-chaos-preview {
       margin-top: 8px;
@@ -585,7 +591,6 @@ function injectSimStylesOnce() {
     .combat-sim-dir-btn.escape { background:rgba(76,175,80,0.35); border-color:var(--green,#4caf50); }
 
     .combat-sim-play-btn { width:100%; padding:10px 12px; font-weight:800; touch-action:manipulation; margin-top:6px; }
-
     .combat-sim-log { max-height:46vh; overflow:auto; }
     .log-line { font-size:12px; line-height:1.3; padding:5px 0;
                 border-bottom:1px dashed rgba(255,255,255,0.07); }
@@ -610,10 +615,10 @@ function injectSimStylesOnce() {
 // ─────────────────────────────────────────────────────────────
 // Modal
 // ─────────────────────────────────────────────────────────────
-
 function ensureModal() {
   injectSimStylesOnce();
   injectChaosStyles();
+
   let modal = document.getElementById("modal-combat-sim");
   if (modal) return modal;
 
@@ -653,8 +658,8 @@ function ensureModal() {
       <div class="combat-sim-main">
         <div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">
-            🃏 Рука · нажми карту или выбери направление
-            <span style="color:var(--green,#4caf50)"> · зелёная = побег</span>
+            🃏 Ваши действия: выберите карту или манёвр
+            <span style="color:var(--green,#4caf50)"> · зелёный = отступление</span>
             <span style="color:#ff9800"> · ⚡ = chaos после выбора</span>
           </div>
           <div id="combat-sim-hand" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
@@ -680,7 +685,6 @@ function ensureModal() {
 // ─────────────────────────────────────────────────────────────
 // Render
 // ─────────────────────────────────────────────────────────────
-
 let SIM_STATE = null;
 let SIM_BUILD = null;
 
@@ -692,19 +696,21 @@ function renderWarn() {
 function renderHud() {
   const el = document.getElementById("combat-sim-hud");
   if (!el) return;
+
   if (!SIM_STATE) { el.innerHTML = `<div class="combat-sim-card">Нет активного боя</div>`; return; }
 
   const s = SIM_STATE;
 
   const stealthHint = s.distance >= LIMITS.ESCAPE_DIST
     ? `<span style="color:var(--green,#4caf50)">(dist-побег доступен)</span>`
-    : `<span style="color:var(--muted)">(нужно stealth≥${stealthThresholdAtDist(s.distance)}, lock ${s.stealthLock??0}/${LIMITS.STEALTH_LOCK_REQUIRED})</span>`;
+    : `<span style="color:var(--muted)">(нужно: скрытность ≥${stealthThresholdAtDist(s.distance)}, удержание ${s.stealthLock??0}/${LIMITS.STEALTH_LOCK_REQUIRED})</span>`;
 
   const plea     = Number(s.social?.plea   ?? 0);
   const threat   = Number(s.social?.threat ?? 0);
   const detColor = s.detonationRisk >= 50 ? "var(--red,#f44336)" : "var(--accent,#7b61ff)";
   const fatigue  = Math.round(s.engineFatigue ?? 0);
   const fatColor = fatigue >= 60 ? "var(--red,#f44336)" : fatigue >= 30 ? "#ff9800" : "var(--muted)";
+
   const eDown    = enemyModulesDown(s);
   const eTotal   = (s.enemy.modules || []).length;
   const cr       = Math.round(s.economy?.credits    ?? 0);
@@ -717,25 +723,33 @@ function renderHud() {
       ${bar(s.player.shield, s.player.maxShield, "var(--accent,#7b61ff)")}
       <div>🧱 обшивка: <b>${s.player.hull}</b>/${s.player.maxHull}</div>
       ${bar(s.player.hull, s.player.maxHull, "#8d6e63")}
-      <div>📏 dist: <b>${Math.round(s.distance)}</b>
-        <span style="color:var(--muted)">(побег≥${LIMITS.ESCAPE_DIST})</span></div>
+
+      <div>📏 Дистанция: <b>${Math.round(s.distance)}</b>
+        <span style="color:var(--muted)">(побег ≥${LIMITS.ESCAPE_DIST})</span></div>
       <div>🎯 попадание: вы <b>${pct01(previewPlayerHitChance(s,"ATTACK_KINETIC"))}</b>
            · враг <b>${pct01(previewEnemyHitChance(s))}</b></div>
+
       <div style="margin-top:6px;">
-        <div>🕵 stealth: <b>${s.stealth.toFixed(0)}</b>/100 ${stealthHint}</div>
+        <div>🕵 Скрытность: <b>${s.stealth.toFixed(0)}</b>/100 ${stealthHint}</div>
         ${bar(s.stealth, 100, "var(--green,#4caf50)")}
-        <div style="color:${fatColor}">⚙️ уст.двиг.: <b>${fatigue}%</b></div>
+
+        <div style="color:${fatColor}">⚙️ Перегрев двиг.: <b>${fatigue}%</b></div>
         ${bar(fatigue, 90, fatColor)}
-        <div>🤲 plea: <b>${plea.toFixed(1)}</b>/${LIMITS.SOCIAL_PLEA_WIN}</div>
+
+        <div>🤲 Убеждение: <b>${plea.toFixed(1)}</b>/${LIMITS.SOCIAL_PLEA_WIN}</div>
         ${bar(plea, LIMITS.SOCIAL_PLEA_WIN, "#26a69a")}
-        <div>☢️ threat: <b>${threat.toFixed(1)}</b>/${LIMITS.SOCIAL_THREAT_WIN}</div>
+
+        <div>☢️ Угроза: <b>${threat.toFixed(1)}</b>/${LIMITS.SOCIAL_THREAT_WIN}</div>
         ${bar(threat, LIMITS.SOCIAL_THREAT_WIN, "#ef5350")}
-        <div style="color:${detColor}">💥 detonation: <b>${s.detonationRisk.toFixed(0)}%</b></div>
+
+        <div style="color:${detColor}">💥 Риск взрыва: <b>${s.detonationRisk.toFixed(0)}%</b></div>
         ${bar(s.detonationRisk, 100, detColor)}
+
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">
           💸 <b>${cr}</b> cr · 🗃 трюм <b>${cargoU}</b>
         </div>
       </div>
+
       <div style="margin-top:6px;font-size:11px;color:var(--muted);">
         ${s.player.modules.map(m => `${m.destroyed?"💀":"✅"} ${esc(m.name)} ${m.hp}/${m.maxHp}`).join(" &nbsp; ")}
       </div>
@@ -747,15 +761,18 @@ function renderHud() {
       ${bar(s.enemy.shield, s.enemy.maxShield, "#7986cb")}
       <div>🧱 корпус: <b>${s.enemy.hull}</b>/${s.enemy.maxHull}</div>
       ${bar(s.enemy.hull, s.enemy.maxHull, "#a1887f")}
+
       <div>🔧 системы: <b>${eTotal-eDown}</b>/${eTotal}
         <span style="color:var(--muted)">(сломано: ${eDown})</span></div>
-      <div>🌡 burn: <b>${Number(s.enemy.burn).toFixed(0)}</b></div>
+
+      <div>🌡 Горение: <b>${Number(s.enemy.burn).toFixed(0)}</b></div>
       <div>💢 агрессия: <b>${((s.enemy.aggression??0.7)*100).toFixed(0)}%</b></div>
-      <div>🔍 scanPower: <b>${Math.round((s.enemy.scanPower??0)*100)}%</b></div>
-      <div>🎯 урон/ход: <b>${s.enemy.baseDamage}</b></div>
-      <div>⚙️ раунд: <b>${s.round}</b>/${LIMITS.MAX_ROUNDS}</div>
+      <div>🔍 Скан-модуль: <b>${Math.round((s.enemy.scanPower??0)*100)}%</b></div>
+      <div>🎯 Баз. урон: <b>${s.enemy.baseDamage}</b></div>
+      <div>⏳ Раунд: <b>${s.round}</b>/${LIMITS.MAX_ROUNDS}</div>
+
       <div style="margin-top:8px;font-size:12px;color:var(--muted);">
-        ${s.over ? `<b>RESULT: ${esc(s.result)}</b>` : "Бой продолжается…"}
+        ${s.over ? `<b>ИТОГ: ${esc({win_kill:'Враг уничтожен',win_flee:'Побег',win_stealth:'Скрылся',win_social_plea:'Договорился',win_social_threat:'Враг отступил',lose_board:'Абордаж',lose_modules:'Корабль разбит',lose_detonation:'Детонация бака'}[s.result] || s.result)}</b>` : 'Бой продолжается…'}
       </div>
     </div>
   `;
@@ -808,11 +825,11 @@ function renderHand() {
 
     const chaosPreviewHtml = chaosAction ? `
       <div class="combat-sim-chaos-preview">
-        <span class="chaos-icon">${chaosIcon}</span>
-        <span style="color:${chaosColor};">
-          CHAOS: <b>${esc(chaosAction.type)}</b> ×${chaosMult.toFixed(2)}
+        <span class="chaos-icon">⚡</span>
+        <span style="color:var(--muted);">
+          <b>Скрытая аномалия</b>
         </span>
-        <span style="color:var(--muted);font-size:10px;">— сработает при розыгрыше</span>
+        <span style="color:var(--muted);font-size:10px;">— сработает после розыгрыша</span>
       </div>
     ` : "";
 
@@ -862,16 +879,16 @@ function renderHand() {
       btnT.addEventListener("click", (e) => { e.stopPropagation(); playWithChaosFlash("toward"); });
       btnA.addEventListener("click", (e) => { e.stopPropagation(); playWithChaosFlash("away"); });
       cardEl.appendChild(btnDiv);
-
     } else {
       const btn       = document.createElement("button");
       btn.type        = "button";
       btn.className   = `btn-primary combat-sim-play-btn${givesEscape ? " escape" : ""}`;
       btn.disabled    = s.over;
       btn.textContent = givesEscape ? "🚀 Сыграть (побег!)" : "▶ Сыграть эту карту";
-
+      
       btn.addEventListener("click", (e) => { e.stopPropagation(); playWithChaosFlash(null); });
       cardEl.addEventListener("click", () => playWithChaosFlash(null));
+
       cardEl.appendChild(btn);
     }
 
@@ -893,15 +910,16 @@ const RESULT_ICON = {
 function renderLog() {
   const el = document.getElementById("combat-sim-log");
   if (!el) return;
+
   if (!SIM_STATE) { el.innerHTML = ""; return; }
 
   el.innerHTML = "";
-
   for (const entry of SIM_STATE.log.slice(-240)) {
     const line     = document.createElement("div");
     line.className = "log-line";
 
     const isResult = entry.title === "RESULT";
+
     if (isResult)                    line.classList.add("log-result");
     else if (entry.who === "player" && entry._hasChaos) line.classList.add("log-player");
     else if (entry.who === "player") line.classList.add("log-player");
@@ -921,7 +939,6 @@ function renderLog() {
 
     line.innerHTML =
       `<b>[${entry.round}] ${icon}${esc(entry.who)}: ${esc(entry.title)}</b><br>${msgs}`;
-
     el.appendChild(line);
   }
   el.scrollTop = el.scrollHeight;
@@ -937,7 +954,6 @@ function renderAll() {
 // ─────────────────────────────────────────────────────────────
 // Actions
 // ─────────────────────────────────────────────────────────────
-
 function newFight() {
   clearChaosFlash();
 
@@ -953,18 +969,27 @@ function newFight() {
     return;
   }
 
+  
   const deck = loadDeckFromCache(equippedItems);
+  console.log("[DEBUG] equippedItems:", equippedItems.map(i => i.id));
+  console.log("[DEBUG] cache keys available:", Object.keys(safeJsonParse(localStorage.getItem(CACHE_KEY), {})));
+  console.log("[DEBUG] matched deck cards:", deck.map(c => c.origin_key));
+
+
   const warn = deck.length < 10
     ? `Карт в кэше: ${deck.length}/10. Открой «🃏 Боевая колода» и сгенерируй недостающие.`
     : "";
 
   SIM_BUILD = { warn, equippedItems, deck };
+
   SIM_STATE = buildCombatState({
     equippedItems,
     deckCards:        deck,
     enemyKey,
     playerCredits:    (typeof getCredits === "function") ? getCredits() : 0,
     playerCargoUnits: cargoUnitsFromPlayerState(),
+    playerFuel: typeof getFuel === "function" ? getFuel() : 0,
+    playerMaxFuel: typeof getFuelCapacity === "function" ? getFuelCapacity() : 100,
     tierScale,
   });
 
@@ -973,10 +998,10 @@ function newFight() {
     messages: [
       `Модули: 4 · Карты: ${deck.length}/10 · Враг: ${enemyKey} · Tier ×${tierScale}`,
       `HP врага: щит ${SIM_STATE.enemy.maxShield} / корпус ${SIM_STATE.enemy.maxHull} · урон: ${SIM_STATE.enemy.baseDamage}/ход`,
-      `Социалка: plea(${LIMITS.SOCIAL_PLEA_WIN}) · threat(${LIMITS.SOCIAL_THREAT_WIN})`,
-      `Усталость двиг.: +30%/применение, −10%/ход`,
-      `Скан: при stealth≥40 шанс 33% вместо атаки`,
-      `Ракеты: оптимум dist≥65`,
+      `Переговоры: убеждение(${LIMITS.SOCIAL_PLEA_WIN}) · угроза(${LIMITS.SOCIAL_THREAT_WIN})`,
+      `Перегрев двиг.: +30%/манёвр, −10%/раунд`,
+      `Скан: при скрытности ≥40 шанс 33% на поиск вместо атаки`,
+      `Ракеты: оптимум на дист. ≥65`,
       `Манёвры: выбирай направление`,
       `Chaos: срабатывает после выбора карты`,
     ],
@@ -1004,6 +1029,7 @@ function autoSim(runs = 100) {
       playerCredits: 200_000, playerCargoUnits: 200,
       tierScale,
     });
+
     while (!s.over) {
       const cardIdx = Math.random() < 0.5 ? 0 : 1;
       const dir     = DIRS[Math.floor(Math.random() * 2)];
@@ -1015,6 +1041,7 @@ function autoSim(runs = 100) {
 
   showToast(`Автосим ${runs} (×${tierScale}): см. консоль`, "info");
   console.log(`[CombatSim] enemy=${enemyKey} tier=×${tierScale} runs=${runs}`);
+
   console.table(Object.entries(stats).map(([result, count]) => ({
     result,
     icon:  RESULT_ICON[result] || "?",
@@ -1027,7 +1054,6 @@ function autoSim(runs = 100) {
 // ─────────────────────────────────────────────────────────────
 // Button injection
 // ─────────────────────────────────────────────────────────────
-
 function tryInjectButtonNearDeck() {
   const deckBtn = document.getElementById("btn-open-deck");
   if (!deckBtn) return false;
@@ -1038,6 +1064,7 @@ function tryInjectButtonNearDeck() {
   b.className = "btn-secondary";
   b.style.marginLeft = "10px";
   b.textContent = "🧪 Симулятор";
+
   deckBtn.parentElement?.appendChild(b);
 
   b.addEventListener("click", () => {
@@ -1045,6 +1072,7 @@ function tryInjectButtonNearDeck() {
     modal.classList.remove("hidden");
     newFight();
   });
+
   return true;
 }
 
@@ -1060,7 +1088,6 @@ function injectButtonNearDeckWithRetry() {
 // ─────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────
-
 document.addEventListener("DOMContentLoaded", () => {
   ensureModal();
   injectButtonNearDeckWithRetry();
@@ -1076,6 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!SIM_STATE || SIM_STATE.over) return;
       const dir = Math.random() < 0.5 ? "away" : "toward";
       runRound(SIM_STATE, Math.random() < 0.5 ? 0 : 1, dir);
+
       // chaos-флэш и для авто-раунда
       if (SIM_STATE._lastChaos) {
         setTimeout(() => showChaosFlash(SIM_STATE._lastChaos), 300);
@@ -1092,7 +1120,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // ─────────────────────────────────────────────────────────────
 // Debug
 // ─────────────────────────────────────────────────────────────
-
 window.CombatSim = {
   open()   { const m = ensureModal(); m.classList.remove("hidden"); newFight(); },
   newFight,

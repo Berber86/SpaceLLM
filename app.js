@@ -1,5 +1,4 @@
 // app.js — точка входа, инициализация, навигация, настройки
-
 import { initFirebase }  from "./firebase.js";
 import {
   initPlayer, renderResources, renderInventory,
@@ -26,19 +25,15 @@ const STARTER_AUTOPILOT = {
   createdAt:     0,
   weight:        1.0,
   foundOn:       null,
-
   rarity:        "common",
   recipeType:    "autopilot_module",
   specialEffect: null,
-
-  name: "УП-3 «Черепаха»",
-
+  name: "Автопилот УП-3 «Черепаха»",
   description:
     "Учебный автопилот третьего поколения, списанный с флота ещё до твоего рождения. " +
     "Корпус исцарапан, разъёмы окислены, прошивка обновлялась последний раз когда ты ещё пешком под стол ходил. " +
     "Тем не менее — запускается, держит курс, выполняет циклы. " +
     "Пять циклов подряд без твоих рук на штурвале. Негусто, но для начала сойдёт.",
-
   flavor:
     "Достал из ящика с надписью «УТИЛЬ». Подключил.\n" +
     "Оно пикнуло. Я чуть не выронил кофе.\n" +
@@ -46,30 +41,25 @@ const STARTER_AUTOPILOT = {
     "На корпусе чья-то гравировка: «Не трогай реле №4».\n" +
     "Реле №4 я, конечно, потрогал. Всё нормально, кажется.\n" +
     "Буду использовать пока не сломается. Или пока не найду что-то лучше.",
-
   effects: {
-    autopilot_cycles_add: 5,
+    autopilot_cycles_add: 3,
   },
-
   stats: {
-    "Автоциклы добычи": "+5 циклов",
+    "Автоциклы добычи": "+3 циклов",
   },
 };
 
 async function giveStarterModule() {
   if (localStorage.getItem("starter_module_given")) return;
-
   const module = {
     ...STARTER_AUTOPILOT,
     ownerId:   getUid(),
     ownerName: getState().name,
     createdAt: Date.now(),
   };
-
   await addToInventory(module);
   renderInventory();
   localStorage.setItem("starter_module_given", "1");
-
   showToast("🎁 В ящике нашёлся старый автопилот УП-3 «Черепаха». Проверь инвентарь.", "info");
 }
 
@@ -80,12 +70,10 @@ async function giveStarterModule() {
 async function main() {
   const hasFirebase   = !!localStorage.getItem("firebase_api_key");
   const hasOpenRouter = !!localStorage.getItem("openrouter_api_key");
-
   if (!hasFirebase || !hasOpenRouter) {
     showSetup();
     return;
   }
-
   await startGame();
 }
 
@@ -99,14 +87,12 @@ async function startGame() {
     showSetup("Не удалось подключиться к Firebase. Проверьте API-ключ.");
     return;
   }
-
   try {
     await initPlayer();
   } catch (e) {
     showSetup(`Ошибка Firebase: ${e.message}`);
     return;
   }
-
   renderResources();
   renderFuel();
   renderCredits();
@@ -118,13 +104,11 @@ async function startGame() {
   initForge();
   initWorkshop();
   initMarket();
-
   setupNavigation();
   setupSettingsModal();
 
   document.getElementById("screen-setup").classList.add("hidden");
   document.getElementById("screen-setup").classList.remove("active");
-
   const gameScreen = document.getElementById("screen-game");
   gameScreen.classList.remove("hidden");
   gameScreen.classList.add("active");
@@ -140,7 +124,6 @@ async function startGame() {
 function showSetup(errorMsg) {
   const setupScreen = document.getElementById("screen-setup");
   const gameScreen  = document.getElementById("screen-game");
-
   setupScreen.classList.remove("hidden");
   setupScreen.classList.add("active");
   gameScreen.classList.add("hidden");
@@ -161,17 +144,14 @@ function showSetup(errorMsg) {
     const fbKey = document.getElementById("input-firebase-key").value.trim();
     const orKey = document.getElementById("input-openrouter-key").value.trim();
     const errEl = document.getElementById("setup-error");
-
     if (!fbKey || !orKey) {
       errEl.textContent = "Заполните оба поля.";
       errEl.classList.remove("hidden");
       return;
     }
-
     errEl.classList.add("hidden");
     localStorage.setItem("firebase_api_key",   fbKey);
     localStorage.setItem("openrouter_api_key", orKey);
-
     await startGame();
   }, { once: true });
 }
@@ -187,10 +167,8 @@ function setupNavigation() {
   tabBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
-
       tabBtns.forEach(b     => b.classList.remove("active"));
       tabContents.forEach(c => c.classList.add("hidden"));
-
       btn.classList.add("active");
       document.getElementById(`tab-${target}`)?.classList.remove("hidden");
 
@@ -198,25 +176,21 @@ function setupNavigation() {
         renderInventory();
         renderEquipmentSlots();
       }
-
       if (target === "forge") {
         try {
           if (typeof window._renderForge === "function") window._renderForge();
         } catch {}
       }
-
       if (target === "workshop") {
         try {
           if (typeof window._renderWorkshop === "function") window._renderWorkshop();
         } catch {}
       }
-
       if (target === "mining") {
         try {
           if (typeof window._renderAsteroids === "function") window._renderAsteroids();
         } catch {}
       }
-
       if (target === "market") {
         import("./market.js").then(({ initMarket: _i, ...m }) => {
           if (typeof m.renderFuelMarket === "function") m.renderFuelMarket();
@@ -245,7 +219,7 @@ function setupSettingsModal() {
       localStorage.getItem("openrouter_api_key") ?? "";
     document.getElementById("settings-pilot-name").value =
       getState()?.name ?? "";
-
+    
     const savedScale = localStorage.getItem("time_scale") ?? "1";
     const scaleEl = document.getElementById("settings-time-scale");
     if (scaleEl) scaleEl.value = ["1","3","10","100"].includes(savedScale) ? savedScale : "1";
@@ -257,7 +231,6 @@ function setupSettingsModal() {
   });
 
   btnClose.addEventListener("click", () => modal.classList.add("hidden"));
-
   modal.addEventListener("click", e => {
     if (e.target === modal) modal.classList.add("hidden");
   });
@@ -271,7 +244,7 @@ function setupSettingsModal() {
     if (fbKey) localStorage.setItem("firebase_api_key",   fbKey);
     if (orKey) localStorage.setItem("openrouter_api_key", orKey);
     if (name)  await setPlayerName(name);
-
+    
     localStorage.setItem("time_scale", ["1","3","10","100"].includes(scale) ? scale : "1");
 
     modal.classList.add("hidden");
@@ -299,7 +272,6 @@ function setupSettingsModal() {
       modal.classList.add("hidden");
     });
   }
-
   if (btnResetCancel) {
     btnResetCancel.addEventListener("click", () => {
       const confirmZone = document.getElementById("reset-confirm-zone");
@@ -314,8 +286,8 @@ function setupSettingsModal() {
 
 async function resetPlayer() {
   const { getDb } = await import("./firebase.js");
-
   const uid = localStorage.getItem("player_uid");
+
   if (uid) {
     try {
       await getDb().ref(`/players/${uid}`).remove();
@@ -343,11 +315,9 @@ async function resetPlayer() {
 // ─────────────────────────────────────────────────────────────────────────────
 // УТИЛИТЫ
 // ─────────────────────────────────────────────────────────────────────────────
-
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // СТАРТ
 // ─────────────────────────────────────────────────────────────────────────────
-
 main();

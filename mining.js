@@ -33,19 +33,16 @@ import { generateFoundModule } from "./forge.js";
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV: ускорение времени
 // ─────────────────────────────────────────────────────────────────────────────
-
 function getTimeScale() {
   const raw = localStorage.getItem("time_scale") ?? "1";
   const n   = parseFloat(raw);
   if (n === 3 || n === 10 || n === 100) return n;
   return 1;
 }
-
 function applyTimeScaleSeconds(seconds) {
   const s = getTimeScale();
   return Math.max(1, Math.round(seconds / s));
 }
-
 function timerTickMs() {
   const s = getTimeScale();
   return Math.max(100, Math.round(1000 / Math.min(s, 10)));
@@ -54,7 +51,6 @@ function timerTickMs() {
 // ─────────────────────────────────────────────────────────────────────────────
 // ASTEROIDS
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const ASTEROIDS = [
   {
     id:"belt-alpha", name:"Пояс Альфа", icon:"🪨", tier:1,
@@ -103,7 +99,6 @@ export const ASTEROIDS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // DROP MASS CAP
 // ─────────────────────────────────────────────────────────────────────────────
-
 const DROP_MASS_CAP_FRACTION = 0.30;
 
 function dropMass(drop) {
@@ -115,7 +110,6 @@ function dropMass(drop) {
 function capDropByMass(drop, maxMass) {
   const mass = dropMass(drop);
   if (mass <= maxMass || mass <= 0) return drop;
-
   const scale = maxMass / mass;
   const out = {};
   for (const [res, amt] of Object.entries(drop)) {
@@ -128,7 +122,6 @@ function capDropByMass(drop, maxMass) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ORE UPGRADE CHAIN
 // ─────────────────────────────────────────────────────────────────────────────
-
 const ORE_UPGRADE_CHAIN = {
   isotopes: "minerals",
   minerals: "metals",
@@ -146,7 +139,6 @@ function applyOreUpgrade(drop) {
 
   for (const [res, amt] of Object.entries(drop)) {
     if ((amt ?? 0) <= 0) continue;
-
     const nextRes = ORE_UPGRADE_CHAIN[res];
     if (!nextRes) continue;
 
@@ -164,7 +156,6 @@ function applyOreUpgrade(drop) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FUEL HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function fuelForFlightTo(asteroid) {
   return calcFuelForFlight(asteroid.distance, 0);
 }
@@ -204,7 +195,6 @@ export function canStartCycle(asteroid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // TIME
 // ─────────────────────────────────────────────────────────────────────────────
-
 function flightTimeToSec(asteroid) {
   const mult = getFlightSpeedMultiplier();
   const mass = getTotalShipMass();
@@ -226,7 +216,6 @@ function miningCycleSec(asteroid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
-
 let timerInterval = null;
 
 export function initMining() {
@@ -239,11 +228,11 @@ export function initMining() {
 // ─────────────────────────────────────────────────────────────────────────────
 // PASSIVE FUEL GEN
 // ─────────────────────────────────────────────────────────────────────────────
-
 let fuelGenInterval = null;
 
 function startFuelGeneration() {
   if (fuelGenInterval) clearInterval(fuelGenInterval);
+
   fuelGenInterval = setInterval(async () => {
     const genPerHour = getFuelGenPerHour();
     if (genPerHour > 0) {
@@ -256,7 +245,6 @@ function startFuelGeneration() {
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTOPILOT
 // ─────────────────────────────────────────────────────────────────────────────
-
 let autopilotCyclesLeft = 0;
 let autopilotRunning    = false;
 
@@ -268,8 +256,10 @@ function stopAutopilot() {
 // ─────────────────────────────────────────────────────────────────────────────
 // RENDER ASTEROIDS
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function renderAsteroids() {
+  const tab = document.getElementById("tab-mining");
+  const scrollPos = tab ? tab.scrollTop : 0; // Запоминаем позицию скролла
+
   const list = document.getElementById("asteroid-list");
   if (!list) return;
 
@@ -307,7 +297,6 @@ export function renderAsteroids() {
   list.innerHTML = bonusBanner + asteroidsToShow.map(a => {
     const isActive  = exp?.asteroidId === a.id;
     const isCleared = cleared.has(a.id);
-
     const timeTo    = flightTimeToSec(a);
     const timeBack  = flightTimeBackSec(a);
     const timeCycle = miningCycleSec(a);
@@ -361,6 +350,10 @@ export function renderAsteroids() {
       </div>
     `;
   }).join("");
+  if (tab && !getExpedition()) {
+     // Если экспедиции нет, восстанавливаем скролл (чтобы не прыгало при перерендере списка)
+     requestAnimationFrame(() => tab.scrollTop = scrollPos);
+  }
 }
 
 function phaseLabel(phase) {
@@ -381,7 +374,6 @@ function dropSummary(drop) {
 // ─────────────────────────────────────────────────────────────────────────────
 // START EXPEDITION
 // ─────────────────────────────────────────────────────────────────────────────
-
 export async function startExpedition(asteroidId) {
   if (getExpedition()) return;
 
@@ -389,7 +381,6 @@ export async function startExpedition(asteroidId) {
   if (!asteroid) return;
 
   const fuelMin = fuelMinForTrip(asteroid);
-
   if (getFuel() < fuelMin) {
     showToast(`⛽ Нужно минимум ${Math.ceil(fuelMin)}л топлива. Есть: ${Math.floor(getFuel())}л`, "warning");
     return;
@@ -429,7 +420,6 @@ export async function startExpedition(asteroidId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // RESUME
 // ─────────────────────────────────────────────────────────────────────────────
-
 function resumeExpedition(exp) {
   showExpeditionStatus(exp);
   const asteroid = ASTEROIDS.find(a => a.id === exp.asteroidId);
@@ -440,6 +430,7 @@ function resumeExpedition(exp) {
   if (exp.phase === "flight_to" || exp.phase === "flight_back") {
     if (elapsed >= exp.duration) onPhaseComplete(exp);
     else startPhaseTimer(exp);
+
   } else if (exp.phase === "mining") {
     if (exp.currentCycleStart) {
       const cycleElapsed = Date.now() - exp.currentCycleStart;
@@ -453,11 +444,10 @@ function resumeExpedition(exp) {
 // ─────────────────────────────────────────────────────────────────────────────
 // TIMERS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function startPhaseTimer(exp) {
   clearInterval(timerInterval);
-
   const tick = timerTickMs();
+
   timerInterval = setInterval(() => {
     const elapsed  = Date.now() - exp.startTime;
     const progress = Math.min(elapsed / exp.duration, 1);
@@ -475,6 +465,7 @@ function startPhaseTimer(exp) {
 function updateProgressUI(progress, leftMs) {
   const bar  = document.getElementById("mining-progress");
   const time = document.getElementById("mining-time-left");
+
   if (bar)  bar.style.width  = `${progress * 100}%`;
   if (time) time.textContent = progress < 1
     ? `Осталось: ${formatDuration(Math.ceil(leftMs / 1000))}`
@@ -484,7 +475,6 @@ function updateProgressUI(progress, leftMs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE TRANSITIONS
 // ─────────────────────────────────────────────────────────────────────────────
-
 async function onPhaseComplete(exp) {
   const asteroid = ASTEROIDS.find(a => a.id === exp.asteroidId);
   if (!asteroid) return;
@@ -503,7 +493,6 @@ async function onPhaseComplete(exp) {
     }
 
   } else if (exp.phase === "flight_back") {
-
     await unloadCargo();
     await setExpedition(null);
     clearInterval(timerInterval);
@@ -530,7 +519,6 @@ async function onPhaseComplete(exp) {
     renderResources();
     renderFuel();
     renderCargo();
-
     hideMiningStatus();
     renderAsteroids();
     showToast("🏠 Вернулись на базу! Трюм разгружен.", "success");
@@ -541,12 +529,11 @@ async function onPhaseComplete(exp) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MINING PANEL
 // ─────────────────────────────────────────────────────────────────────────────
-
 function renderMiningPanel(exp, asteroid) {
   const statusEl = document.getElementById("mining-status");
   if (!statusEl) return;
-  statusEl.classList.remove("hidden");
 
+  statusEl.classList.remove("hidden");
   document.getElementById("mining-asteroid-name").textContent =
     `${asteroid.icon} ${asteroid.name} — Цикл ${exp.cyclesDone + 1}`;
 
@@ -589,15 +576,16 @@ function renderMiningPanel(exp, asteroid) {
     const fuelReturnNow   = fuelForReturnNow(asteroid);
     const fuelCycle       = fuelForCycle();
     const fuelReturnAfter = fuelForReturnAfterCycle(asteroid);
+
     const canMineMore     = fuelNow >= fuelCycle + fuelReturnAfter;
 
     let infoText = `⛽ ${Math.floor(fuelNow)}л  |  🏠 Домой сейчас: ~${Math.ceil(fuelReturnNow)}л`;
 
     if (!full && !inCycle) {
       if (canMineMore) {
-        infoText += `  |  ⛏ Цикл+возврат: ~${Math.ceil(fuelCycle + fuelReturnAfter)}л`;
+        infoText +=   `|  ⛏ Цикл+возврат: ~${Math.ceil(fuelCycle + fuelReturnAfter)}л`;
       } else {
-        infoText += `  |  ⚠️ Цикл+возврат: ~${Math.ceil(fuelCycle + fuelReturnAfter)}л — не хватает`;
+        infoText +=   `|  ⚠️ Цикл+возврат: ~${Math.ceil(fuelCycle + fuelReturnAfter)}л — не хватает`;
       }
     }
 
@@ -650,7 +638,6 @@ function renderAutopilotButton(exp, asteroid, inCycle, full, hasFuel) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SEARCHED ASTEROIDS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function getSearchedAsteroids() {
   try {
     const raw = localStorage.getItem("searched_asteroids");
@@ -667,7 +654,6 @@ function markAsteroidSearched(asteroidId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MINING CYCLE
 // ─────────────────────────────────────────────────────────────────────────────
-
 async function startMiningCycle(exp, asteroid) {
   if (!canStartCycle(asteroid)) {
     showToast("⛽ Нет топлива на цикл + возврат. Летим домой.", "warning");
@@ -677,7 +663,6 @@ async function startMiningCycle(exp, asteroid) {
   }
 
   const cleared = getClearedAsteroids();
-
   const stealth  = Math.max(0.05, getGuardStealthMultiplier());
   const baseGuard = asteroid.guardChance ?? 0;
   const guardP   = Math.min(0.95, baseGuard / stealth);
@@ -690,28 +675,77 @@ async function startMiningCycle(exp, asteroid) {
         await beginCycleTimer(exp, asteroid);
         return;
       }
-
       stopAutopilot();
       showToast("🤖 Автопилот остановлен: охрана в зоне.", "warning");
     }
 
     const enemy = pickEnemy(asteroid.tier);
+    const enemyCfg = pickEnemy(asteroid.tier);
+    if (!enemyCfg) {
+       await beginCycleTimer(exp, asteroid);
+       return;
+    }
+
     showCombatModal(
-      enemy,
-      (_result) => {
-        markAsteroidCleared(asteroid.id);
-        renderAsteroids();
-        beginCycleTimer(exp, asteroid);
-      },
-      async (result, _penalty) => {
-        const msg = result?.retreated
-          ? "Вы отступили. Летим домой с тем что есть."
-          : "Охрана отбила атаку. Трюм потерян. Летим домой.";
-        showToast(msg, "warning");
+      enemyCfg,
+      async (resultState) => {
+        const res = resultState.result;
+        
+        // --- ПРИМЕНЯЕМ ЗАТРАТЫ ИЗ БОЯ (Сброс груза, Топливо) ---
+        const { spendFuel, getCargo, jettisonCargo } = await import("./player.js");
+        if (resultState.economy?.spentFuel > 0) {
+          await spendFuel(resultState.economy.spentFuel);
+          showToast(`⛽ Сожжено в бою: ${resultState.economy.spentFuel}л`, "warning");
+        }
+        if (resultState.economy?.dropCargoPct > 0) {
+          const cargoMap = getCargo();
+          let dumpedTotal = 0;
+          for (const [rKey, rAmt] of Object.entries(cargoMap)) {
+             const dAmt = Math.ceil(rAmt * Math.min(1, resultState.economy.dropCargoPct));
+             if (dAmt > 0) {
+                 await jettisonCargo(rKey, dAmt);
+                 dumpedTotal += dAmt;
+             }
+          }
+          if (dumpedTotal > 0) showToast(`🛰 Сброшено ${dumpedTotal} ед. груза для ускорения`, "warning");
+        }
 
-        if (!result?.retreated) await clearCargo();
-
-        startReturnFlight(exp, asteroid);
+        if (res === "win_kill" || res === "win_stealth" || res === "win_social_threat") {
+          markAsteroidCleared(asteroid.id);
+          renderAsteroids();
+          if (res === "win_kill") {
+             if (enemyCfg.reward) await addResources(enemyCfg.reward);
+             showToast("Враг уничтожен. Зона чиста.", "success");
+          } else {
+             showToast("Охрана отступила. Можно продолжать добычу.", "success");
+          }
+          beginCycleTimer(exp, asteroid);
+        } else if (res === "win_flee") {
+          showToast("Вы ушли от погони. Возвращаемся на базу.", "info");
+          startReturnFlight(exp, asteroid);
+        } else if (res === "win_social_plea") {
+          showToast("Вы откупились. Трюм пуст, кредиты списаны. Экстренный прыжок на базу.", "warning");
+          const { getCredits, spendCredits, clearCargo, setExpedition } = await import("./player.js");
+          await clearCargo();
+          const creds = getCredits();
+          if (creds > 500) await spendCredits(creds - 500);
+          await setExpedition(null);
+          renderAsteroids();
+          hideMiningStatus();
+        } else {
+          showToast("Ваш корабль разбит. Аварийное восстановление на базе...", "error");
+          const { getCredits, spendCredits, getResources, spendResources, clearCargo, setExpedition } = await import("./player.js");
+          await clearCargo();
+          const creds = getCredits();
+          await spendCredits(Math.floor(creds / 2));
+          const r = getResources();
+          const cost = {};
+          for (let k in r) cost[k] = Math.floor(r[k] / 2);
+          await spendResources(cost);
+          await setExpedition(null);
+          renderAsteroids();
+          hideMiningStatus();
+        }
       }
     );
     return;
@@ -743,8 +777,8 @@ async function beginCycleTimer(exp, asteroid) {
 
 function startCycleTimer(exp, asteroid) {
   clearInterval(timerInterval);
-
   const tick = timerTickMs();
+
   timerInterval = setInterval(() => {
     const elapsed  = Date.now() - exp.currentCycleStart;
     const total    = exp.duration;
@@ -762,8 +796,8 @@ function startCycleTimer(exp, asteroid) {
 
 async function completeMiningCycle(exp, asteroid) {
   let drop = rollDrop(asteroid.dropPerCycle);
-
   const y = Math.max(0.05, getMiningYieldMultiplier());
+
   for (const k of Object.keys(drop)) {
     if (drop[k] > 0) drop[k] = Math.max(1, Math.floor(drop[k] * y));
   }
@@ -793,7 +827,7 @@ async function completeMiningCycle(exp, asteroid) {
     .map(([k, v]) => `${resIcon(k)} +${v}`)
     .join("  ");
 
-  const extra = upgradeLog.length ? `  ${upgradeLog.join(" ")}` : "";
+  const extra = upgradeLog.length ? ` (${upgradeLog.join(" ")})` : "";
   showToast(`⛏ Цикл ${exp.cyclesDone}: ${resStr}${extra}`, "success");
 
   if (isCargoFull()) {
@@ -828,7 +862,6 @@ async function completeMiningCycle(exp, asteroid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FOUND MODULE
 // ─────────────────────────────────────────────────────────────────────────────
-
 async function _tryFindLostModule(asteroid) {
   const apiKey = (localStorage.getItem("openrouter_api_key") ?? "").trim();
   if (!apiKey) return;
@@ -857,7 +890,6 @@ async function _tryFindLostModule(asteroid) {
 
     await addToInventory(found);
     renderInventory();
-
     showToast(
       `💀 Находка: «${found.name}» [${found.rarity}] — добавлено в инвентарь`,
       "success"
@@ -871,16 +903,14 @@ async function _tryFindLostModule(asteroid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // EMERGENCY JETTISON
 // ─────────────────────────────────────────────────────────────────────────────
-
 const JETTISON_ORDER = ["isotopes", "minerals", "metals", "data", "alloys"]; // от дешёвого к дорогому
 const JETTISON_STEP  = 3;
 
 async function emergencyJettison(asteroid) {
   const { getCargo, jettisonCargo } = await import("./player.js");
-
   const log = [];
-  let maxIterations = 200;
 
+  let maxIterations = 200;
   while (maxIterations-- > 0) {
     const fuelNeeded = calcFuelForFlight(asteroid.distance, getCargoMass());
     if (getFuel() >= fuelNeeded) break;
@@ -910,7 +940,6 @@ async function emergencyJettison(asteroid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // RETURN
 // ─────────────────────────────────────────────────────────────────────────────
-
 async function startReturnFlight(exp, asteroid) {
   stopAutopilot();
 
@@ -918,7 +947,6 @@ async function startReturnFlight(exp, asteroid) {
 
   if (getFuel() < fuelReturn) {
     showToast("⚠️ Топлива не хватает на возврат. Сбрасываем груз...", "warning");
-
     const { success, log } = await emergencyJettison(asteroid);
 
     if (log.length > 0) {
@@ -936,7 +964,6 @@ async function startReturnFlight(exp, asteroid) {
         await spendFuel(getFuel());
       }
     }
-
   } else {
     await spendFuel(fuelReturn);
   }
@@ -947,6 +974,7 @@ async function startReturnFlight(exp, asteroid) {
   exp.startTime         = Date.now();
   exp.duration          = timeBack;
   exp.currentCycleStart = null;
+
   await setExpedition(exp);
 
   renderAsteroids();
@@ -965,10 +993,10 @@ async function startReturnFlight(exp, asteroid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // UI STATUS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function showExpeditionStatus(exp) {
   const statusEl = document.getElementById("mining-status");
   if (!statusEl) return;
+
   statusEl.classList.remove("hidden");
 
   const asteroid = ASTEROIDS.find(a => a.id === exp.asteroidId);
@@ -988,8 +1016,10 @@ function showExpeditionStatus(exp) {
 function showReturnStatus(asteroid) {
   document.getElementById("mining-asteroid-name").textContent =
     `🔙 Летим домой с ${asteroid.icon} ${asteroid.name}`;
+
   const bar = document.getElementById("mining-progress");
   if (bar) bar.style.width = "0%";
+
   const btn = document.getElementById("btn-collect");
   if (btn) btn.classList.add("hidden");
 }
@@ -997,10 +1027,13 @@ function showReturnStatus(asteroid) {
 function hideMiningStatus() {
   const statusEl = document.getElementById("mining-status");
   if (statusEl) statusEl.classList.add("hidden");
+
   const btn = document.getElementById("btn-collect");
   if (btn) btn.classList.add("hidden");
+
   const ret = document.getElementById("btn-return-early");
   if (ret) ret.classList.add("hidden");
+
   const ap  = document.getElementById("btn-autopilot");
   if (ap) ap.classList.add("hidden");
 }
@@ -1008,7 +1041,6 @@ function hideMiningStatus() {
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────────────────────────────────────
-
 function rollDrop(dropTable) {
   const result = {};
   for (const [res, [min, max]] of Object.entries(dropTable)) {
@@ -1064,6 +1096,5 @@ export function formatDuration(seconds) {
 // ─────────────────────────────────────────────────────────────────────────────
 // WINDOW EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
-
 window._startExpedition = startExpedition;
 window._renderAsteroids = renderAsteroids;

@@ -157,7 +157,7 @@ export function getChaosFlavorHint(type) {
 // Генерирует случайный mult для chaos-действия из одной из двух зон
 export function rollChaosMult() {
   const zone = CHAOS_MULT_ZONES[Math.floor(Math.random() * CHAOS_MULT_ZONES.length)];
-  return Math.round((zone.min + Math.random() * (zone.max - zone.min)) * 100) / 100;
+  return Math.round((zone.min + Math.random()  *(zone.max - zone.min))*  100) / 100;
 }
 
 // Типы действий с выбором направления

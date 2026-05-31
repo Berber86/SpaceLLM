@@ -12,10 +12,10 @@ const FIREBASE_CONFIG_BASE = {
 let db = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 export function initFirebase() {
   const apiKey = localStorage.getItem("firebase_api_key");
   if (!apiKey) return false;
+
   if (db) return true;
   
   try {
@@ -37,7 +37,6 @@ export function initFirebase() {
 export function getDb() { return db; }
 
 // ── Игрок ─────────────────────────────────────────────────────────────────
-
 export async function loadPlayer(uid) {
   const snap = await db.ref(`/players/${uid}`).get();
   return snap.exists() ? snap.val() : null;
@@ -52,7 +51,6 @@ export async function updatePlayer(uid, partial) {
 }
 
 // ── Рынок ─────────────────────────────────────────────────────────────────
-
 export async function publishToMarket(item) {
   const ref = db.ref("/market").push();
   await ref.set({ ...item, id: ref.key, salesCount: 0 });
@@ -75,7 +73,6 @@ export function unsubscribeMarket() {
 }
 
 // ── Счётчик продаж (идея 10) ───────────────────────────────────────────────
-
 export async function incrementSaleCount(marketItemId) {
   const ref = db.ref(`/market/${marketItemId}/salesCount`);
   await ref.transaction(current => (current ?? 0) + 1);

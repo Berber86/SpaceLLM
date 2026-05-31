@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Cosmic Forge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,11 +40,11 @@
        ОСНОВНОЙ ЭКРАН
   ════════════════════════════════════════════════════ -->
   <div id="screen-game" class="screen hidden">
-
+    
     <!-- Шапка -->
     <header class="game-header">
       <span class="logo">🌌 Cosmic Forge</span>
-
+      
       <div class="resources-bar">
         <span class="res" title="Изотопы">☢️ <span id="res-isotopes">0</span></span>
         <span class="res" title="Минералы">🪨 <span id="res-minerals">0</span></span>
@@ -84,8 +87,10 @@
             <div id="mining-progress" class="progress-fill"></div>
           </div>
           <span id="mining-time-left">—</span>
+          
           <div id="mining-fuel-info" class="mining-fuel-info"></div>
           <div id="cargo-bar"></div>
+
           <button id="btn-collect" class="btn-primary hidden">⛏ Начать цикл добычи</button>
           <button id="btn-return-early" class="btn-secondary hidden">🔙 Лететь домой досрочно</button>
         </div>
@@ -100,13 +105,16 @@
         <h2>🔥 Кузня</h2>
         <span id="forge-level" class="forge-level-badge">Уровень кузни: 1</span>
       </div>
+
       <div class="forge-layout">
         <div class="forge-inputs">
           <h3>Рецепт (до 3 компонентов)</h3>
           <div id="forge-recipe-builder"></div>
+          
           <div id="forge-summary" class="forge-summary"></div>
           <button id="btn-forge" class="btn-primary" disabled>🔥 Создать</button>
         </div>
+
         <div class="forge-result">
           <h3>Результат</h3>
           <div id="forge-output" class="artifact-card empty">
@@ -115,6 +123,7 @@
           <button id="btn-save-artifact" class="btn-secondary hidden">💾 Сохранить в инвентарь</button>
         </div>
       </div>
+
       <div id="forge-log" class="forge-log"></div>
     </div>
 
@@ -155,8 +164,10 @@
     ═════════════════════════════════════════════════ -->
     <div id="tab-market" class="tab-content hidden">
       <h2>Рынок</h2>
+      
       <div id="fuel-market-section" class="market-section"></div>
       <div id="resource-market-section" class="market-section"></div>
+
       <div class="market-section-title">🎖️ Артефакты (Эхо-копии)</div>
       <div id="market-list" class="card-grid"></div>
     </div>
@@ -169,6 +180,7 @@
   <div id="modal-settings" class="modal hidden">
     <div class="modal-box">
       <h2>⚙ Настройки</h2>
+      
       <div class="field-group">
         <label>Firebase API Key</label>
         <input type="text" id="settings-firebase-key" placeholder="AIzaSy...">
@@ -191,10 +203,12 @@
         </select>
         <span class="hint">Влияет на таймеры полёта/добычи и генерацию топлива.</span>
       </div>
+
       <div class="modal-actions">
         <button id="btn-settings-save"  class="btn-primary">Сохранить</button>
         <button id="btn-settings-close" class="btn-secondary">Закрыть</button>
       </div>
+
       <div class="reset-zone">
         <button id="btn-reset-player" class="btn-reset">🗑️ Удалить игрока</button>
         <div id="reset-confirm-zone" class="reset-confirm hidden">
@@ -232,7 +246,6 @@
   ════════════════════════════════════════════════════ -->
   <div id="modal-equipment" class="modal hidden">
     <div class="modal-box modal-equipment-box">
-
       <!-- Шапка модалки -->
       <div class="equip-modal-header">
         <h2>⚔️ Снаряжение корабля</h2>
@@ -253,7 +266,6 @@
         </span>
       </div>
       <div id="equip-modal-inventory" class="equip-modal-inventory"></div>
-
     </div>
   </div>
 
