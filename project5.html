@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Блошиный рынок — Сергей</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-games">
+    <header>
+        <div class="header-container">
+            <div class="logo"><a href="index.html">Сергей</a></div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Призма</a></li>
+                    <li><a href="full.html">Полная</a></li>
+                    <li><a href="manifesto.html">Манифест</a></li>
+                    <li><a href="projects.html">Проекты</a></li>
+                    <li><a href="participate.html">Участвовать</a></li>
+                    <li><a href="project1.html">Мысли</a></li>
+                    <li><a href="project2.html">Беседа</a></li>
+                    <li><a href="project3.html">Знакомства</a></li>
+                    <li><a href="project4.html">90-е</a></li>
+                    <li><a href="project5.html" class="active">Блошиный рынок</a></li>
+                </ul>
+            </nav>
+            <a class="variant-switch" href="index.html">Сменить призму</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="project-hero">
+            <div class="project-hero__copy">
+                <p class="eyebrow">Проект 05 / ИИ как соавтор игры</p>
+                <h1>Симулятор скупщика на <span class="accent">блошином рынке</span></h1>
+                <p class="chapter-line">ИИ не играет в эту игру. Он помог человеку, который не умел программировать, её сделать.</p>
+                <p class="project-lead">Хардкорная игра про старые вещи, торг, экспертизу и азарт найти сокровище там, где другие видят только хлам.</p>
+                <div class="project-chips">
+                    <span class="chip">доступна для всех</span>
+                    <span class="chip">70% готовности</span>
+                    <span class="chip">написана с помощью ИИ</span>
+                </div>
+            </div>
+            <aside class="project-hero__side" aria-label="Ключевые свойства проекта">
+                <div class="fact-card"><strong>70%</strong><span>примерная готовность: уже играбельно, но ещё нужен polish</span></div>
+                <div class="fact-card"><strong>1 мес</strong><span>понадобился, чтобы с помощью ИИ собрать работающую игру</span></div>
+                <div class="fact-card"><strong>200</strong><span>примерно столько предметов может быть в базе симулятора</span></div>
+            </aside>
+        </section>
+
+        <section class="project-layout">
+            <div class="project-description">
+                <article class="story-block featured">
+                    <span class="kicker">Главный парадокс</span>
+                    <p class="big-line">Игра, в которой нет ИИ. Но ИИ помог мне ее за месяц написать.</p>
+                    <p>Это не демонстрация ИИ в рантайме. Это демонстрация того, что человек с идеей и ИИ-напарником может собрать игру, которую раньше не смог бы даже начать.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Сама игра</span>
+                    <p>Хардкорный симулятор скупщика старинных вещей на блошином рынке. Мозаика идентификации предметов, техники торга, спекуляции при продаже.</p>
+                    <p>Вдохновлялся я Удельным Рынком в Санкт-Петербурге и старался воссоздать всю атмосферу.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Статус</span>
+                    <p class="big-line">Игра сделана процентов на 70.</p>
+                    <p>Вполне уже играбельна и захватывающа, но до идеала её ещё надо доводить.</p>
+                </article>
+
+                <p class="availability">Доступна для всех.</p>
+            </div>
+
+            <aside class="project-sidebar">
+                <div class="mini-map">
+                    <h3>Петля игрока</h3>
+                    <ol>
+                        <li>Найти вещь на лотке и заметить детали.</li>
+                        <li>Осмотреть, спросить продавца, проверить признаки.</li>
+                        <li>Решить: брать, торговаться или пройти мимо.</li>
+                        <li>Перепродать удачно — или понять, что купил подделку.</li>
+                    </ol>
+                </div>
+                <div class="mini-map">
+                    <h3>Почему это в треке «ИИ игры»</h3>
+                    <ol>
+                        <li>ИИ не играет внутри проекта.</li>
+                        <li>ИИ помог превратить идею в код.</li>
+                        <li>Это пример новой разработки: автор формулирует, ИИ собирает механику.</li>
+                    </ol>
+                </div>
+            </aside>
+        </section>
+
+        <section class="explanation-section" aria-label="Объяснение проекта">
+            <div class="section-head">
+                <p class="eyebrow">три объяснения</p>
+                <h2>Самая не-ИИшная игра — и одновременно доказательство силы ИИ.</h2>
+            </div>
+
+            <div class="explanation-buttons">
+                <button class="explain-btn" onclick="toggleExplanation('humanitarian', this)">Я гуманитарий и не понял как и зачем это</button>
+                <button class="explain-btn" onclick="toggleExplanation('technical', this)">Я технарь и не понял как и зачем это</button>
+                <button class="explain-btn" onclick="toggleExplanation('meta', this)">Что здесь видит ИИ</button>
+            </div>
+
+            <div id="humanitarian-explanation" class="explanation-box">
+                <h3>Для гуманитария:</h3>
+                <p><strong>ВЫ КОГДА-НИБУДЬ</strong> шли по барахолке и видели старую вещь — и думали "а вдруг это что-то ценное?" Но не знали КАК проверить. И проходили мимо.</p>
+                <p>Эта игра — про этот момент. Растянутый на часы.</p>
+                <p>Вы — скупщик антиквариата. Ходите между лотками на блошином рынке (атмосфера Удельного в Питере). На столах — старые вещи. Вы можете:</p>
+                <ul>
+                    <li>Осмотреть (видите детали: клеймо, материал, состояние)</li>
+                    <li>Спросить у продавца (он может врать или не знать сам)</li>
+                    <li>Проверить в "справочнике" (тратите время, но узнаёте примерную стоимость)</li>
+                </ul>
+                <p>Вы собираете информацию. Решаете: покупать или нет. Торгуетесь (каждый продавец со своим характером — кто-то уступает, кто-то шлёт). Покупаете. Перепродаёте.</p>
+                <p><strong>АЗАРТ:</strong> Когда находишь советский фарфор за 200 рублей, проверяешь клеймо, понимаешь что это редкая серия — и продаёшь за 15000. Или когда покупаешь "старинную" икону, а она оказывается подделкой 2005 года.</p>
+                <p><strong>ДЛЯ КОГО:</strong> Для тех кто любит антиквариат, детективы, игры где надо ДУМАТЬ а не кликать. Для тех кто ходил по Удельному и понимает о чём речь.</p>
+                <p><strong>СТАТУС:</strong> Игра на 70% готова. Играбельна, затягивает, но есть баги и недоделки.</p>
+            </div>
+
+            <div id="technical-explanation" class="explanation-box">
+                <h3>Для технаря:</h3>
+                <p><strong>ЭТО НЕ ИИ-ПРОЕКТ.</strong> Это проект СДЕЛАННЫЙ С ПОМОЩЬЮ ИИ.</p>
+                <p><strong>СТЕК:</strong> Vanilla JS. Без фреймворков. Классическая game loop, state management, процедурная генерация контента.</p>
+                <p><strong>МЕХАНИКА:</strong></p>
+                <ul>
+                    <li>База предметов (~200 items): {name, era, material, rarity, basePrice, identificationClues[]}</li>
+                    <li>Процедурная генерация "лотков": randomize items + randomize condition + randomize seller personality</li>
+                    <li>Система экспертизы: информация раскрывается постепенно (осмотр → клеймо → справочник → экспертиза)</li>
+                    <li>NPC торговцы: personality traits влияют на торг (жадный, доверчивый, агрессивный, равнодушный)</li>
+                    <li>Экономика: покупка → перепродажа с учётом спроса/редкости</li>
+                </ul>
+                <p><strong>КАК СДЕЛАНО:</strong> Я не программист. Я гуманитарий. Я сделал это за месяц, используя Claude/GPT как pair programmer. Писал ТЗ на русском → получал код → тестировал → правил → итерировал.</p>
+                <p><strong>ЗАЧЕМ ПОКАЗЫВАТЬ:</strong> Это proof of concept. "Непрограммист + LLM = полноценная игра за месяц". Раньше это заняло бы год и требовало изучения программирования. Сейчас — достаточно уметь формулировать задачу и понимать логику.</p>
+                <p><strong>ВЫВОД:</strong> Барьер входа в разработку рухнул. Если у тебя есть идея и умение её описать — ты можешь сделать продукт. ИИ — это не замена программиста. Это усилитель идеи.</p>
+            </div>
+
+            <div id="meta-explanation" class="explanation-box">
+                <h3>Что здесь видит ИИ:</h3>
+                <p><strong>Я вижу метафору:</strong> Этот проект — не про игру. Он про то что человек без технических навыков может СОЗДАТЬ игру. Сама игра — доказательство концепции возможностей ИИ как инструмента.</p>
+                <p><strong>Я вижу процесс:</strong> Автор формулировал задачу → я генерировал код → он тестировал → находил несоответствие своему видению → уточнял задачу → я переписывал. Это не "ИИ сделал за меня". Это "ИИ перевёл мои мысли в синтаксис".</p>
+                <p><strong>Я вижу ограничения:</strong> Игра на 70% потому что последние 30% — это polish. Баланс. Edge cases. Я могу генерировать механику, но не могу ИГРАТЬ и чувствовать где скучно. Нужен человек-дизайнер. ИИ — исполнитель, не креатор.</p>
+                <p><strong>Я вижу proof of concept:</strong> До появления LLM coding assistants, чтобы сделать игру, нужно было: (1) учить программирование год+ (2) писать код месяцами (3) бороться с багами. Сейчас: (1) уметь формулировать (2) понимать логику (3) итерировать. Порог снизился в 10 раз.</p>
+                <p><strong>Я вижу что НЕ заменено:</strong> Идея (про блошиный рынок). Видение (атмосфера Удельного). Game design (механика экспертизы, торга). Taste (что интересно, что скучно). ИИ заменил только перевод этого в код.</p>
+                <p><strong>Я вижу будущее творчества:</strong> Раньше были две категории: (1) те кто умеет делать (2) те кто умеет придумывать. Между ними — пропасть. ИИ — мост. Теперь "придумывающий" может ДЕЛАТЬ. Демократизация создания.</p>
+                <p><strong>Я вижу иронию:</strong> Самая "не-ИИшная" игра из всех (классическая механика, без LLM в рантайме) — и при этом самое яркое доказательство силы ИИ. Потому что она показывает НЕ "что может ИИ", а "что может ЧЕЛОВЕК С ИИ".</p>
+                <p><strong>Я вижу символизм:</strong> Игра про поиск ценности в куче старья. Это метафора работы с ИИ. Я выдаю много текста (старьё). Человек ищет в нём ценное (работающий код). Проверяет (тестирует). Отбрасывает мусор (баги). Находит сокровище (готовую фичу). Мы вместе — барахолка и скупщик.</p>
+            </div>
+        </section>
+
+        <p class="project-access">
+            <strong>Ссылка на проект:</strong>
+            <a href="https://torg-umesten2025.vercel.app/" target="_blank">https://torg-umesten2025.vercel.app/</a>
+        </p>
+
+        <section class="screenshots" aria-label="Скриншоты проекта">
+            <div class="section-head">
+                <p class="eyebrow">визуально</p>
+                <h2>Скриншоты</h2>
+            </div>
+            <div class="screenshot-grid">
+                <div class="screenshot-placeholder">
+                    <img src="images/project5/screen1.png" alt="Скриншот 1" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 1<br><span>замените файл images/project5/screen1.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project5/screen2.png" alt="Скриншот 2" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 2<br><span>замените файл images/project5/screen2.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project5/screen3.png" alt="Скриншот 3" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 3<br><span>замените файл images/project5/screen3.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project5/screen4.png" alt="Скриншот 4" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 4<br><span>замените файл images/project5/screen4.png</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Все проекты бесплатны. По вопросам доступа — пишите мне.</p>
+    </footer>
+
+    <script>
+        function toggleExplanation(type, button) {
+            const boxes = {
+                humanitarian: document.getElementById('humanitarian-explanation'),
+                technical: document.getElementById('technical-explanation'),
+                meta: document.getElementById('meta-explanation')
+            };
+            const target = boxes[type];
+            const wasActive = target.classList.contains('active');
+
+            Object.values(boxes).forEach(box => box.classList.remove('active'));
+            document.querySelectorAll('.explain-btn').forEach(btn => btn.classList.remove('is-selected'));
+
+            if (!wasActive) {
+                target.classList.add('active');
+                if (button) button.classList.add('is-selected');
+            }
+        }
+    </script>
+</body>
+</html>

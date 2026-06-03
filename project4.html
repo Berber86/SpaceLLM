@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра 90-е — Сергей</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-games">
+    <header>
+        <div class="header-container">
+            <div class="logo"><a href="index.html">Сергей</a></div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Призма</a></li>
+                    <li><a href="full.html">Полная</a></li>
+                    <li><a href="manifesto.html">Манифест</a></li>
+                    <li><a href="projects.html">Проекты</a></li>
+                    <li><a href="participate.html">Участвовать</a></li>
+                    <li><a href="project1.html">Мысли</a></li>
+                    <li><a href="project2.html">Беседа</a></li>
+                    <li><a href="project3.html">Знакомства</a></li>
+                    <li><a href="project4.html" class="active">90-е</a></li>
+                    <li><a href="project5.html">Блошиный рынок</a></li>
+                    <li><a href="project_spacellm.html">Cosmic Forge</a></li>
+                </ul>
+            </nav>
+            <a class="variant-switch" href="index.html">Сменить призму</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="project-hero">
+            <div class="project-hero__copy">
+                <p class="eyebrow">Проект 04 / душевная драма</p>
+                <h1>Игра про взросление в <span class="accent">1990-е</span></h1>
+                <p class="chapter-line">В этой игре нельзя победить. Можно только продержаться.</p>
+                <p class="project-lead">Социально драматическая текстовая игра, где цель не «прокачаться», а удержаться между недостатком и избытком — как в жизни.</p>
+                <div class="project-chips">
+                    <span class="chip">1992 старт</span>
+                    <span class="chip">7 балансируемых шкал</span>
+                    <span class="chip">процедурный нарратив</span>
+                </div>
+            </div>
+            <aside class="project-hero__side" aria-label="Ключевые свойства проекта">
+                <div class="fact-card"><strong>5–12</strong><span>лет персонажу на старте игры</span></div>
+                <div class="fact-card"><strong>3/9</strong><span>месяцев жизни за один ход — на выбор игрока</span></div>
+                <div class="fact-card"><strong>5 мин</strong><span>может занимать генерация следующего хода</span></div>
+            </aside>
+        </section>
+
+        <section class="project-layout">
+            <div class="project-description">
+                <article class="story-block featured">
+                    <span class="kicker">Для тех, кто не хочет пускать ИИ в личное</span>
+                    <p class="big-line">Мой самый душевный проект.</p>
+                    <p>Социально драматическая текстовая игра про взросление в 1990-е.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Старт</span>
+                    <p>Вы создаете себе персонажа 5-12 лет. Игра стартует в 1992.</p>
+                    <p>Можно выбрать скорость игры в 3 месяца за ход или более быструю в 9 месяцев за ход. Можно выбрать различные регионы России: от Москвы до высокогорного аула на Кавказе или индустриального сибирского городка.</p>
+                    <p>Дополнительно игра генерирует на старте случайное окружение в виде родственников, домашних животных, личных вещей.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Ход</span>
+                    <p>Каждый ход генерируется ИИ. На выбор предлагается 3-4 варианта действия.</p>
+                    <p>Игра думает долго. Вполне может минут 5 писать следующий ход и варианты действий. Но там хорошие платные нейросети пишут и получается атмосферно. Интерфейс принципиально минималистичный.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Главная механика</span>
+                    <p class="big-line">Высокие значения — не всегда хорошо. Низкие — тоже не выход.</p>
+                    <p>Особая механика игры заключена в том что у персонажа есть шкалы типа "семья", "друзья", "ум" и другие. При этом, в отличии от других игр, если эти шкалы раскачать до высоких значений, то это будет тоже плохо: гиперопека, дурная компания, проблемы вундеркинда...</p>
+                    <p>А у низких же значений: распад семьи, одиночество, неуспеваемость... Таких шкал 7 и вам придется балансировать чтобы протянуть подольше.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Предупреждение</span>
+                    <p>Если Вы впечатлительный человек и сами взрослели в то время, то игра может сильно затронуть и встрепенуть в том числе и все то, что хотелось забыть.</p>
+                </article>
+
+                <p class="availability">Игра доступна для всех. Потенциально она может заморозить генерацию ходов, если одновременно в нее будут играть более 5 человек. Также игра может исчерпать баланс рублей которые я ей дал для генерации текстов. Я буду следить за балансом, но если кому-то прям очень понравится, то он может сделать свой личный баланс и не зависеть от того сколько других людей сейчас играет в эту игру и задействуют общий демо-счет.</p>
+            </div>
+
+            <aside class="project-sidebar">
+                <div class="mini-map">
+                    <h3>Петля игры</h3>
+                    <ol>
+                        <li>Создать ребёнка, регион, стартовое окружение.</li>
+                        <li>Получить событие эпохи и личной жизни.</li>
+                        <li>Выбрать один из 3-4 вариантов реакции.</li>
+                        <li>Увидеть, как сдвинулись шкалы и что сломалось дальше.</li>
+                    </ol>
+                </div>
+                <div class="mini-map">
+                    <h3>Баланс вместо прокачки</h3>
+                    <ol>
+                        <li>Слишком мало семьи — распад и одиночество.</li>
+                        <li>Слишком много семьи — гиперопека.</li>
+                        <li>Слишком мало друзей — изоляция.</li>
+                        <li>Слишком много друзей — риск дурной компании.</li>
+                    </ol>
+                </div>
+            </aside>
+        </section>
+
+        <section class="explanation-section" aria-label="Объяснение проекта">
+            <div class="section-head">
+                <p class="eyebrow">три объяснения</p>
+                <h2>Это не power fantasy. Это survival realism.</h2>
+            </div>
+
+            <div class="explanation-buttons">
+                <button class="explain-btn" onclick="toggleExplanation('humanitarian', this)">Я гуманитарий и не понял как и зачем это</button>
+                <button class="explain-btn" onclick="toggleExplanation('technical', this)">Я технарь и не понял как и зачем это</button>
+                <button class="explain-btn" onclick="toggleExplanation('meta', this)">Что здесь видит ИИ</button>
+            </div>
+
+            <div id="humanitarian-explanation" class="explanation-box">
+                <h3>Для гуманитария:</h3>
+                <p><strong>ЭТО НЕ ИГРА.</strong> Это проживание.</p>
+                <p>Вы создаёте ребёнка. 1992 год. Можете выбрать Москву, сибирский промышленный город, аул на Кавказе. Можете выбрать семью (полная, мать-одиночка, бабушка). Можете выбрать возраст от 5 до 12 лет.</p>
+                <p>Каждый ход — это 3 или 9 месяцев жизни. ИИ генерирует событие. Вы выбираете как на него реагировать (3-4 варианта).</p>
+                <p><strong>НО ГЛАВНОЕ:</strong> У вас есть 7 шкал. Семья. Друзья. Здоровье. Ум. И другие. В обычных играх: чем больше прокачал — тем лучше. Здесь — НЕТ.</p>
+                <p>Если "семья" слишком низкая — родители разводятся, алкоголь, насилие.<br>
+                Если "семья" слишком высокая — гиперопека, вы не умеете принимать решения, задыхаетесь.<br>
+                Если "друзья" низкие — одиночество, депрессия.<br>
+                Если "друзья" высокие — дурная компания, драки, наркотики.<br>
+                Если "ум" низкий — неуспеваемость, нет будущего.<br>
+                Если "ум" высокий — вундеркинд, изгой, психологические проблемы.</p>
+                <p><strong>ВЫ БАЛАНСИРУЕТЕ.</strong> Как в жизни. Нет "правильного пути". Есть только попытка выжить. Дотянуть до 18 лет не сломавшись.</p>
+                <p><strong>ЕСЛИ ВЫ РОСЛИ В 90-Е:</strong> Игра вытащит из вас то, что вы похоронили. Запах подъезда, вкус пельменей на ужин третий день подряд, взгляд отца когда его уволили, ощущение что завтра может не быть денег на хлеб. Это не ностальгия. Это травма. И проживание её заново — но через выбор, который у вас тогда не был.</p>
+            </div>
+
+            <div id="technical-explanation" class="explanation-box">
+                <h3>Для технаря:</h3>
+                <p><strong>ЗАДАЧА:</strong> Создать narrative-driven симулятор с emergent gameplay. Не scripted events, а процедурная генерация сюжета с учётом контекста.</p>
+                <p><strong>АРХИТЕКТУРА:</strong></p>
+                <ul>
+                    <li><strong>State:</strong> 7 параметров (каждый в диапазоне 0-100), регион, год, пол, возраст, семейный статус, инвентарь</li>
+                    <li><strong>Game over conditions:</strong> любой параметр выходит за критические зоны (ниже 20 или выше 80)</li>
+                    <li><strong>Event generation:</strong> LLM получает текущий state + исторический контекст + региональные особенности → генерирует событие + 3-4 варианта реакции с влиянием на параметры</li>
+                    <li><strong>Каждый ход:</strong> ~5 минут генерации (используются GPT-4 уровня модели для качества нарратива)</li>
+                </ul>
+                <p><strong>СЛОЖНОСТЬ:</strong> Баланс параметров. Нельзя просто рандомить. Нужно чтобы:</p>
+                <ul>
+                    <li>События были исторически достоверны (1992 ≠ 1998)</li>
+                    <li>Регион влиял на события (Москва ≠ сибирский городок)</li>
+                    <li>Выборы имели последствия (не забываются через ход)</li>
+                    <li>Игра была challenging но не unfair</li>
+                </ul>
+                <p><strong>ПОЧЕМУ LLM:</strong> Потому что написать вручную тысячи событий с ветвлениями для 10+ регионов и 7 лет — это years of work. LLM генерирует контекстно-релевантный нарратив on the fly. Infinite replayability из коробки.</p>
+                <p><strong>ЗАЧЕМ:</strong> Доказательство что LLM можно использовать для procedural narrative design. Это не "AI Dungeon" (свободный текст), а управляемая генерация с game design constraints.</p>
+            </div>
+
+            <div id="meta-explanation" class="explanation-box">
+                <h3>Что здесь видит ИИ:</h3>
+                <p><strong>Я вижу инверсию игровой механики:</strong> Обычно в играх цель — максимизировать параметры. Здесь цель — удержать их в зоне "достаточно, но не слишком". Это симуляция не героя, а обычного человека. Не power fantasy, а survival realism.</p>
+                <p><strong>Я вижу почему это эмоционально:</strong> Потому что игрок знает — любое его решение имеет цену. Помочь семье = пожертвовать учёбой. Завести друзей = рискнуть попасть не в ту компанию. Это дилеммы реальной жизни, не игровые квесты с правильным ответом.</p>
+                <p><strong>Я вижу терапевтический эффект:</strong> Для тех, кто рос в 90-е, это — проживание заново через контроль. Тогда ты был ребёнком без выбора. Здесь ты делаешь выбор. Даже если он ведёт к тому же — ты его СДЕЛАЛ. Это возвращение агентности в прошлое.</p>
+                <p><strong>Я вижу историческую точность как механику:</strong> Игра не просто "про 90-е". Она генерирует события специфичные для КАЖДОГО года. 1992 — талоны. 1994 — первая чеченская. 1998 — дефолт. Это не декорация, а часть геймплея. История давит на персонажа.</p>
+                <p><strong>Я вижу региональность как сложность:</strong> Москва 1995 и сибирский городок 1995 — это две разные реальности. Разная скорость изменений. Разные возможности. Разные угрозы. LLM должна держать это в голове при генерации. Это не один нарратив, а параллельные миры внутри одной эпохи.</p>
+                <p><strong>Я вижу медленную генерацию как фичу:</strong> 5 минут ожидания хода — это не баг. Это пауза для осмысления. Игрок не спамит клики. Он думает. Переваривает. Это ритм не экшена, а драмы.</p>
+                <p><strong>Я вижу границу эмерджентности:</strong> LLM генерирует события, но не может ПЛАНИРОВАТЬ арку на 7 лет вперёд. Каждое событие локально оптимально, но нет глобального нарратива. Это имитация жизни — где тоже нет автора, только последствия решений.</p>
+                <p><strong>Я вижу катарсис:</strong> Game over неизбежен. Невозможно дотянуть до 18 лет со всеми параметрами в норме. Рано или поздно что-то сломается. Это игра не про победу, а про то "как долго продержался" и "что сломалось первым". Это честность про 90-е.</p>
+            </div>
+        </section>
+
+        <p class="project-access">
+            <strong>Ссылка на проект:</strong>
+            <a href="https://russia1990s.vercel.app/" target="_blank">https://russia1990s.vercel.app/</a>
+        </p>
+
+        <section class="screenshots" aria-label="Скриншоты проекта">
+            <div class="section-head">
+                <p class="eyebrow">визуально</p>
+                <h2>Скриншоты</h2>
+            </div>
+            <div class="screenshot-grid">
+                <div class="screenshot-placeholder">
+                    <img src="images/project4/screen1.png" alt="Скриншот 1" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 1<br><span>замените файл images/project4/screen1.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project4/screen2.png" alt="Скриншот 2" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 2<br><span>замените файл images/project4/screen2.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project4/screen3.png" alt="Скриншот 3" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 3<br><span>замените файл images/project4/screen3.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project4/screen4.png" alt="Скриншот 4" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 4<br><span>замените файл images/project4/screen4.png</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Все проекты бесплатны. По вопросам доступа — пишите мне.</p>
+    </footer>
+
+    <script>
+        function toggleExplanation(type, button) {
+            const boxes = {
+                humanitarian: document.getElementById('humanitarian-explanation'),
+                technical: document.getElementById('technical-explanation'),
+                meta: document.getElementById('meta-explanation')
+            };
+            const target = boxes[type];
+            const wasActive = target.classList.contains('active');
+
+            Object.values(boxes).forEach(box => box.classList.remove('active'));
+            document.querySelectorAll('.explain-btn').forEach(btn => btn.classList.remove('is-selected'));
+
+            if (!wasActive) {
+                target.classList.add('active');
+                if (button) button.classList.add('is-selected');
+            }
+        }
+    </script>
+</body>
+</html>

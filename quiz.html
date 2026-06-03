@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сергей — тест призмы</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="persona-gate">
+    <header>
+        <div class="header-container">
+            <div class="logo"><a href="index.html">Сергей</a></div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Вход</a></li>
+                    <li><a href="quiz.html" class="active">Тест</a></li>
+                    <li><a href="full.html">Полная</a></li>
+                    <li><a href="lite/index.html">Лайт</a></li>
+                    <li><a href="pro/index.html">Деловая</a></li>
+                    <li><a href="humor/index.html">Юмор</a></li>
+                    <li><a href="rpg/index.html">RPG</a></li>
+                    <li><a href="therapy/index.html">Тихая</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="persona-shell">
+            <section class="home-hero page-intro">
+                <div class="hero-copy">
+                    <p class="eyebrow">создание персонажа / выбор призмы</p>
+                    <h1 class="hero-title">Теперь выберем вашу призму точнее.</h1>
+                    <p class="hero-lead">Три раунда. Каждый выбор меняет язык и атмосферу следующего. В конце получится одна из шести версий сайта: манифестная, бережная, деловая, самоироничная, игровая или тихая терапевтическая.</p>
+                </div>
+                <aside class="hero-orbit" aria-label="Варианты сайта">
+                    <div class="orbit-card"><strong>27</strong><span>путей: каждый следующий вопрос подстраивается под предыдущий ответ</span></div>
+                    <div class="orbit-card"><strong>6</strong><span>финальных призм чтения</span></div>
+                    <div class="orbit-card"><strong>1</strong><span>цель: беречь внимание и говорить на вашем языке</span></div>
+                </aside>
+            </section>
+
+            <section class="persona-card" aria-label="Создание призмы">
+                <div class="persona-progress" aria-hidden="true">
+                    <div class="persona-dot" id="dot-1"><span></span></div>
+                    <div class="persona-dot" id="dot-2"><span></span></div>
+                    <div class="persona-dot" id="dot-3"><span></span></div>
+                </div>
+                <div class="persona-pathline" id="pathline"></div>
+                <div class="persona-step active" id="question-step">
+                    <p class="eyebrow" id="round-label">раунд 1 из 3</p>
+                    <h2 class="persona-question" id="question-title"></h2>
+                    <p class="persona-small" id="question-subtitle"></p>
+                    <div class="persona-options" id="options"></div>
+                </div>
+                <div class="persona-result" id="persona-result">
+                    <p class="eyebrow">призма собрана</p>
+                    <h2 class="persona-question" id="result-title"></h2>
+                    <div class="persona-result-card"><p class="persona-small" id="result-text"></p></div>
+                    <div class="persona-actions">
+                        <a class="persona-button" id="result-link" href="#">Открыть версию</a>
+                        <button class="persona-button secondary" type="button" id="reset-build">Пересобрать билд</button>
+                        <a class="persona-button secondary" href="projects.html">Сразу к проектам</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer><p>Выбор можно пересобрать в любой момент. Это способ настроить подачу, а не тест личности.</p></footer>
+
+    <script>
+        const keys = ['full','lite','pro','humor','rpg','therapy'];
+        const finals = {
+            full: { title:'Полная / манифестная версия', url:'full.html', text:'Вам подходит версия с авторским голосом, контекстом, манифестом и подробными объяснениями. Здесь важен путь, а не только результат.' },
+            lite: { title:'Лайт / бережная версия', url:'lite/index.html', text:'Вам подходит спокойная версия: меньше текста, ясные блоки, минимум шума и бережное отношение к вниманию.' },
+            pro: { title:'Деловая / работодатель', url:'pro/index.html', text:'Вам подходит версия про компетенции, применимость, междисциплинарность и рабочие AI-прототипы без стартап-питча.' },
+            humor: { title:'Самоирония / юмор', url:'humor/index.html', text:'Вам подходит версия, где серьёзные идеи объясняются через едкость, самоиронию и человеческое «да, всё это немного странно». ' },
+            rpg: { title:'RPG / карта мира', url:'rpg/index.html', text:'Вам подходит игровая версия: проекты как квесты, направления как ветки навыков, сайт как карта исследования.' },
+            therapy: { title:'Тёмная терапевтическая', url:'therapy/index.html', text:'Вам подходит тихая версия: мягкая атмосфера, безопасность, приватность, самонаблюдение и минимум давления.' }
+        };
+        const state = { step:1, scores:Object.fromEntries(keys.map(k=>[k,0])), path:[] };
+        const S = o => Object.assign(Object.fromEntries(keys.map(k=>[k,0])), o);
+        const q1 = { theme:'neutral', title:'Когда вы встречаете незнакомую сложную идею, что вам помогает войти?', subtitle:'Выберите не «умный» ответ, а самый похожий на вас.', options:[
+            {id:'meaning', tag:'смысл', label:'Понять человеческую историю', text:'Мне важно, кто это сделал, почему и какая боль за этим стоит.', score:S({full:2,therapy:1})},
+            {id:'clarity', tag:'ясность', label:'Быстро увидеть суть', text:'Мне нужен спокойный вход: что это, зачем, куда нажать.', score:S({lite:2,pro:1})},
+            {id:'play', tag:'игра', label:'Почувствовать живость', text:'Мне легче понимать через игру, образ, шутку или необычную рамку.', score:S({rpg:1,humor:1,full:1})}
+        ]};
+        const q2 = {
+            meaning:{theme:'depth',title:'Какую глубину вы переносите лучше всего?',subtitle:'Вы выбрали смысловой вход. Теперь выберите температуру этой глубины.',options:[
+                {id:'manifest',tag:'нерв',label:'Сильный авторский голос',text:'Пусть будет позиция, риск, личная история и масштаб.',score:S({full:2})},
+                {id:'quiet',tag:'бережно',label:'Тихая честность',text:'Глубина нужна, но без крика и без ощущения, что меня тащат за руку.',score:S({therapy:2,lite:1})},
+                {id:'role',tag:'роль',label:'Понять, чем человек полезен',text:'Мне важна не исповедь, а то, как опыт превращается в компетенцию.',score:S({pro:2})}
+            ]},
+            clarity:{theme:'calm',title:'Что точно не надо делать с вашим вниманием?',subtitle:'Иногда лучший способ выбрать призму — понять, от чего хочется уйти.',options:[
+                {id:'no-wall',tag:'не надо',label:'Не надо простыню текста',text:'Если можно сказать короче — скажите короче.',score:S({lite:2})},
+                {id:'no-jargon',tag:'не надо',label:'Не надо заумно',text:'Я не хочу продираться через термины, чтобы найти простую мысль.',score:S({lite:1,therapy:1})},
+                {id:'no-chaos',tag:'не надо',label:'Не надо хаос и балаган',text:'Юмор и игра окей, но сейчас мне нужен собранный деловой смысл.',score:S({pro:2})}
+            ]},
+            play:{theme:'craft',title:'Через какую игру вам проще понимать серьёзное?',subtitle:'Игровой вход бывает разным: ирония, карта мира или безопасная дистанция.',options:[
+                {id:'irony',tag:'яд',label:'Через самоиронию',text:'Шутка помогает быстрее понять суть и не утонуть в пафосе.',score:S({humor:3})},
+                {id:'quest',tag:'квест',label:'Через карту и роли',text:'Мне нравится, когда сложное превращается в классы, ветки, квесты и локации.',score:S({rpg:3})},
+                {id:'distance',tag:'дистанция',label:'Через мягкую дистанцию',text:'Игра нужна не для смеха, а чтобы аккуратно подойти к личному.',score:S({therapy:2,rpg:1})}
+            ]}
+        };
+        const q3 = {
+            manifest:{theme:'depth',title:'А если текст станет слишком серьёзным?',subtitle:'Последний выбор: как удержать серьёзность живой?',options:[
+                {id:'more-fire',tag:'огонь',label:'Пусть горит',text:'Если позиция сильная, я готов к полному манифесту.',score:S({full:3})},
+                {id:'add-smile',tag:'ирония',label:'Добавить самоиронии',text:'Серьёзность лучше заходит, когда автор умеет смеяться над собой.',score:S({humor:3})},
+                {id:'make-safe',tag:'тише',label:'Сделать безопаснее',text:'Мне ближе глубокий, но спокойный тон.',score:S({therapy:3})}
+            ]},
+            quiet:{theme:'calm',title:'Что для вас значит «бережно»?',subtitle:'Бережность может быть про краткость, безопасность или отсутствие давления.',options:[
+                {id:'short',tag:'кратко',label:'Меньше текста',text:'Лучше коротко и ясно.',score:S({lite:3})},
+                {id:'safe',tag:'мягко',label:'Меньше давления',text:'Хочу тёмную тихую комнату, где никто не продаёт мне прозрение.',score:S({therapy:3})},
+                {id:'structured',tag:'структура',label:'Больше структуры',text:'Бережность — это когда понятно, где тезис, где пример, где вывод.',score:S({pro:2,lite:1})}
+            ]},
+            role:{theme:'craft',title:'Какая роль автора вам интереснее?',subtitle:'Одна и та же биография может быть историей, компетенцией или кейсом.',options:[
+                {id:'bridge',tag:'стык',label:'Мост между мирами',text:'Гуманитарное мышление + AI-инструменты + продуктовая проверка.',score:S({pro:3})},
+                {id:'story-role',tag:'история',label:'Человек с личной ставкой',text:'Хочу всё же видеть мотив и путь.',score:S({full:2,pro:1})},
+                {id:'brief-role',tag:'сжато',label:'Короткий профиль',text:'Дайте компетенции и проекты без длинного контекста.',score:S({lite:2,pro:1})}
+            ]},
+            'no-wall':{theme:'calm',title:'Насколько коротко?',subtitle:'Можно сжать по-разному.',options:[
+                {id:'brief',tag:'минимум',label:'Очень коротко',text:'Тезис, польза, ссылка.',score:S({lite:3})},
+                {id:'brief-funny',tag:'весело',label:'Коротко и смешно',text:'Если шутка экономит абзац — используйте шутку.',score:S({humor:3})},
+                {id:'brief-work',tag:'дело',label:'Коротко и по делу',text:'Как executive summary.',score:S({pro:3})}
+            ]},
+            'no-jargon':{theme:'calm',title:'Что поставить вместо зауми?',subtitle:'Если убрать термины, чем заменить сложность?',options:[
+                {id:'plain',tag:'просто',label:'Простым языком',text:'Объясните как человеку, а не комитету.',score:S({lite:3})},
+                {id:'metaphor',tag:'образ',label:'Метафорой',text:'Через образ, карту или игровую рамку.',score:S({rpg:2,humor:1})},
+                {id:'warm',tag:'мягко',label:'Тёплым тоном',text:'Без зауми, но с уважением к личному.',score:S({therapy:3})}
+            ]},
+            'no-chaos':{theme:'craft',title:'Какой порядок вам нужен?',subtitle:'Вы не против необычного, но хотите управляемость.',options:[
+                {id:'competence',tag:'роль',label:'Компетенции',text:'Покажите, что человек умеет и где применим.',score:S({pro:3})},
+                {id:'cases',tag:'кейсы',label:'Кейсы',text:'Покажите проекты как доказательства подхода.',score:S({pro:2,full:1})},
+                {id:'clean',tag:'чисто',label:'Чистую короткую версию',text:'Без балагана, но и без корпоративного стекла.',score:S({lite:3})}
+            ]},
+            irony:{theme:'craft',title:'Какой юмор вам подходит?',subtitle:'Юмор бывает спасением, а бывает шумом.',options:[
+                {id:'acid',tag:'едко',label:'Едкая самоирония',text:'Можно колко, если по делу и без унижения читателя.',score:S({humor:3})},
+                {id:'light',tag:'легко',label:'Лёгкая улыбка',text:'Шутки как приправа, не как основное блюдо.',score:S({lite:1,humor:2})},
+                {id:'no-jokes',tag:'стоп',label:'Лучше без шуток',text:'Я передумал: давайте собранно.',score:S({pro:2,therapy:1})}
+            ]},
+            quest:{theme:'craft',title:'Какую карту открыть?',subtitle:'Если сайт — игра, то какой жанр?',options:[
+                {id:'worldmap',tag:'карта',label:'Карта мира',text:'Проекты как квесты, направления как локации.',score:S({rpg:3})},
+                {id:'char-sheet',tag:'персонаж',label:'Лист персонажа',text:'Покажите автора через навыки, классы и характеристики.',score:S({rpg:2,pro:1})},
+                {id:'less-game',tag:'тише',label:'Меньше игры',text:'Игра окей, но хочу спокойнее.',score:S({lite:1,therapy:2})}
+            ]},
+            distance:{theme:'depth',title:'Какая дистанция вам нужна?',subtitle:'Личное можно читать через игру, через тишину или через историю.',options:[
+                {id:'safe-room',tag:'тихо',label:'Тихая комната',text:'Главное — мягкость, приватность, отсутствие давления.',score:S({therapy:3})},
+                {id:'myth',tag:'миф',label:'Миф и карта',text:'Пусть личное станет квестом и символом.',score:S({rpg:3})},
+                {id:'confession',tag:'голос',label:'Прямая история',text:'Пусть автор говорит сам, без маски.',score:S({full:3})}
+            ]}
+        };
+        function applyTheme(theme){document.body.classList.remove('theme-depth','theme-calm','theme-craft'); if(theme&&theme!=='neutral')document.body.classList.add('theme-'+theme)}
+        function setProgress(n){for(let i=1;i<=3;i++)document.getElementById('dot-'+i).classList.toggle('done',i<=n)}
+        function renderPath(){document.getElementById('pathline').innerHTML=state.path.map(x=>`<span class="persona-token">${x}</span>`).join('')}
+        function addScore(score){keys.forEach(k=>state.scores[k]+=score[k]||0)}
+        function currentQ(){if(state.step===1)return q1;if(state.step===2)return q2[state.path[0]];return q3[state.path[1]]}
+        function render(){const q=currentQ();applyTheme(q.theme);document.getElementById('round-label').textContent='раунд '+state.step+' из 3';document.getElementById('question-title').textContent=q.title;document.getElementById('question-subtitle').textContent=q.subtitle;const box=document.getElementById('options');box.innerHTML='';q.options.forEach(o=>{const b=document.createElement('button');b.className='persona-option';b.innerHTML=`<small>${o.tag}</small><strong>${o.label}</strong><span>${o.text}</span>`;b.onclick=()=>choose(o);box.appendChild(b)});renderPath()}
+        function choose(o){addScore(o.score);state.path.push(o.id);setProgress(state.step);if(state.step<3){state.step++;render()}else finish()}
+        function finish(){document.getElementById('question-step').classList.remove('active');let winner=Object.entries(state.scores).sort((a,b)=>b[1]-a[1])[0][0];const r=finals[winner];localStorage.setItem('sergey-site-build',winner);document.getElementById('result-title').textContent=r.title;document.getElementById('result-text').innerHTML=`<strong>Ваш путь:</strong> ${state.path.join(' → ')}<br><br>${r.text}`;document.getElementById('result-link').href=r.url;document.getElementById('persona-result').classList.add('active');renderPath()}
+        document.getElementById('reset-build').onclick=()=>{state.step=1;state.scores=Object.fromEntries(keys.map(k=>[k,0]));state.path=[];localStorage.removeItem('sergey-site-build');document.getElementById('persona-result').classList.remove('active');document.getElementById('question-step').classList.add('active');setProgress(0);render()};
+        setProgress(0);render();
+    </script>
+</body>
+</html>

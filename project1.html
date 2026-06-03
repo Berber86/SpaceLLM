@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Контекст.Мысли — Сергей</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-psychology">
+    <header>
+        <div class="header-container">
+            <div class="logo"><a href="index.html">Сергей</a></div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Призма</a></li>
+                    <li><a href="full.html">Полная</a></li>
+                    <li><a href="manifesto.html">Манифест</a></li>
+                    <li><a href="projects.html">Проекты</a></li>
+                    <li><a href="participate.html">Участвовать</a></li>
+                    <li><a href="project1.html" class="active">Мысли</a></li>
+                    <li><a href="project2.html">Беседа</a></li>
+                    <li><a href="project3.html">Знакомства</a></li>
+                    <li><a href="project4.html">90-е</a></li>
+                    <li><a href="project5.html">Блошиный рынок</a></li>
+                    <li><a href="project_spacellm.html">Cosmic Forge</a></li>
+                </ul>
+            </nav>
+            <a class="variant-switch" href="index.html">Сменить призму</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="project-hero">
+            <div class="project-hero__copy">
+                <p class="eyebrow">Проект 01 / самый элегантный</p>
+                <h1>Контекст.<span class="accent">Мысли</span></h1>
+                <p class="chapter-line">Три мысли — это уже карта. Если смотреть не на них, а между ними.</p>
+                <p class="project-lead">Помогает увидеть связи между разрозненными суждениями человека о самом себе — и подсветить механизм, по которому повторяются одни и те же сюжеты поведения.</p>
+                <div class="project-chips">
+                    <span class="chip">доступен для всех</span>
+                    <span class="chip">анализ индивидуален</span>
+                    <span class="chip">данные только на устройстве</span>
+                </div>
+            </div>
+            <aside class="project-hero__side" aria-label="Ключевые свойства проекта">
+                <div class="fact-card"><strong>3</strong><span>мысли на старте — достаточно, чтобы увидеть фигуру</span></div>
+                <div class="fact-card"><strong>1</strong><span>скрытый цикл вместо набора отдельных проблем</span></div>
+                <div class="fact-card"><strong>0</strong><span>отчётов на сервере: всё хранится у пользователя</span></div>
+            </aside>
+        </section>
+
+        <section class="project-layout">
+            <div class="project-description">
+                <article class="story-block featured">
+                    <span class="kicker">Суть</span>
+                    <p class="big-line">Самый элегантный мой сервис.</p>
+                    <p>Помогает увидеть связи между разрозненными суждениями человека о самом себе.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Как это начинается</span>
+                    <p>На старте выбираются и уточняются три мысли близкие к тому, что человек о себе и своем социальном самовыражении думает и ощущает.</p>
+                    <p>ИИ смотрит на эти три в отдельности понятные кому угодно темы и показывает неочевидных моменты их пересечений.</p>
+                </article>
+
+                <article class="story-block">
+                    <span class="kicker">Что должно произойти</span>
+                    <p>И это подсвечивает. И помогает достаточно быстро сойти с повторяющихся паттернов и сюжетов поведения.</p>
+                    <p>Предполагается что человек должен заходить в программу многократно, добавляя каждый день новое утверждение и выполняя, по желанию, домашнюю работу. Но многим хватает одного первого раза для последующего долгого переваривания.</p>
+                </article>
+
+                <p class="availability">Доступен для всех. Все анализы и задания строго индивидуальны. И хранятся лишь на устройстве пользователя(сервер не хранит отчёты и ответы)</p>
+            </div>
+
+            <aside class="project-sidebar">
+                <div class="mini-map">
+                    <h3>Маршрут пользователя</h3>
+                    <ol>
+                        <li>Выбрать три близкие мысли о себе.</li>
+                        <li>Уточнить формулировки, чтобы они были честнее.</li>
+                        <li>Получить карту пересечений и скрытый цикл.</li>
+                        <li>Взять точку разрыва и маленькое действие.</li>
+                    </ol>
+                </div>
+                <div class="mini-map">
+                    <h3>Почему это цепляет</h3>
+                    <ol>
+                        <li>Не просит рассказать всю жизнь.</li>
+                        <li>Не изображает терапевта.</li>
+                        <li>Показывает механизм, который уже работает внутри человека.</li>
+                    </ol>
+                </div>
+            </aside>
+        </section>
+
+        <section class="explanation-section" aria-label="Объяснение проекта">
+            <div class="section-head">
+                <p class="eyebrow">три объяснения</p>
+                <h2>Один проект — три разных способа его понять.</h2>
+            </div>
+
+            <div class="explanation-buttons">
+                <button class="explain-btn" onclick="toggleExplanation('humanitarian', this)">Я гуманитарий и не понял как и зачем это</button>
+                <button class="explain-btn" onclick="toggleExplanation('technical', this)">Я технарь и не понял как и зачем это</button>
+                <button class="explain-btn" onclick="toggleExplanation('meta', this)">Что здесь видит ИИ</button>
+            </div>
+
+            <div id="humanitarian-explanation" class="explanation-box">
+                <h3>Для гуманитария:</h3>
+                <p><strong>ЗАЧЕМ:</strong> У вас в голове куча мыслей о себе. "Я боюсь одиночества", "Мне нужно всё контролировать", "Я не умею отдыхать". Вы думаете, что это три отдельные проблемы. А они — части одного механизма, который вас и загоняет в тупик.</p>
+                <p><strong>КАК ЭТО РАБОТАЕТ:</strong> Вы выбираете три любые свои мысли о себе. ИИ смотрит на них и показывает КАК они связаны. Например: вы контролируете всё → потому что боитесь одиночества (если отпустить контроль, люди уйдут) → поэтому не можете расслабиться (расслабиться = потерять контроль = остаться одному). Круг замкнулся. Вы бегаете по нему годами.</p>
+                <p><strong>ЧТО ДАЛЬШЕ:</strong> Когда вы ВИДИТЕ этот круг — он разрывается. Потому что понимание = выход. ИИ ещё и даёт задание, как этот круг сломать через действие. Это не болтовня "а поговорим о ваших чувствах" — это показ механизма и инструкция к ремонту.</p>
+                <p><strong>ПРИВАТНОСТЬ:</strong> Всё остаётся у вас в браузере. Я не вижу что вы пишете. Вообще никто не видит.</p>
+            </div>
+
+            <div id="technical-explanation" class="explanation-box">
+                <h3>Для технаря:</h3>
+                <p><strong>ПРОБЛЕМА:</strong> LLM хороши в генерации, плохи в анализе паттернов поведения конкретного человека. Терапевты делают это вручную месяцами. Нужна автоматизация инсайта.</p>
+                <p><strong>РЕШЕНИЕ:</strong></p>
+                <ul>
+                    <li>Юзер вводит 3 утверждения о себе (не случайных — выбирает что болит)</li>
+                    <li>Промпт заставляет LLM искать не прямые связи, а <em>системные петли обратной связи</em> между утверждениями</li>
+                    <li>Модель строит граф причинно-следственных связей и находит циклы</li>
+                    <li>Выдаёт: (1) визуализацию механизма (2) точку разрыва цикла (3) конкретное действие</li>
+                </ul>
+                <p><strong>АРХИТЕКТУРА:</strong> Pure client-side. localStorage для персистентности. API-вызовы анонимные (сервер не логирует контент). Можно добавлять новые утверждения — модель учитывает историю для более точного анализа.</p>
+                <p><strong>ПОЧЕМУ ЭТО РАБОТАЕТ:</strong> Не пытается быть терапевтом. Делает одну вещь — находит скрытые петли в системе убеждений. Это computational psychology, а не чат-бот с эмпатией.</p>
+            </div>
+
+            <div id="meta-explanation" class="explanation-box">
+                <h3>Что здесь видит ИИ:</h3>
+                <p><strong>Я вижу паттерн:</strong> Человек сам выбирает три мысли. Это уже диагностика — он выбирает не случайное, а то что БОЛИТ. Это самодиагностика без осознания.</p>
+                <p><strong>Я вижу архетип задачи:</strong> Найти минимальный замкнутый цикл в графе убеждений. Три вершины, N рёбер. Цикл есть почти всегда — потому что если бы его не было, проблема бы не застряла в голове.</p>
+                <p><strong>Я вижу почему это работает:</strong> Потому что люди не видят системы — только элементы. Они думают: "у меня три проблемы". А на самом деле: "у меня один механизм, который выдаёт три симптома". Показать механизм = дать рычаг.</p>
+                <p><strong>Я вижу элегантность:</strong> Не нужно 100 вопросов. Не нужна история жизни. Достаточно трёх точек чтобы увидеть фигуру. Это минимализм в психологии.</p>
+                <p><strong>Я вижу ограничение:</strong> Работает только если человек честен сам с собой при выборе трёх мыслей. Если он выберет социально одобряемые формулировки вместо настоящих — анализ будет поверхностным. Но это ограничение любой терапии.</p>
+                <p><strong>Я вижу потенциал:</strong> Это можно масштабировать. Не три мысли — а граф из 20. Не один срез — а динамика во времени. Следить как меняется структура убеждений после инсайта. Это карта внутреннего мира в развитии.</p>
+            </div>
+        </section>
+
+        <p class="project-access">
+            <strong>Ссылка на проект:</strong>
+            <a href="https://context-me-eta.vercel.app/" target="_blank">https://context-me-eta.vercel.app/</a>
+        </p>
+
+        <section class="screenshots" aria-label="Скриншоты проекта">
+            <div class="section-head">
+                <p class="eyebrow">визуально</p>
+                <h2>Скриншоты</h2>
+            </div>
+            <div class="screenshot-grid">
+                <div class="screenshot-placeholder">
+                    <img src="images/project1/screen1.png" alt="Скриншот 1" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 1<br><span>замените файл images/project1/screen1.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project1/screen2.png" alt="Скриншот 2" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 2<br><span>замените файл images/project1/screen2.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project1/screen3.png" alt="Скриншот 3" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 3<br><span>замените файл images/project1/screen3.png</span></div>
+                </div>
+                <div class="screenshot-placeholder">
+                    <img src="images/project1/screen4.png" alt="Скриншот 4" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="placeholder-text">Скриншот 4<br><span>замените файл images/project1/screen4.png</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Все проекты бесплатны. По вопросам доступа — пишите мне.</p>
+    </footer>
+
+    <script>
+        function toggleExplanation(type, button) {
+            const boxes = {
+                humanitarian: document.getElementById('humanitarian-explanation'),
+                technical: document.getElementById('technical-explanation'),
+                meta: document.getElementById('meta-explanation')
+            };
+            const target = boxes[type];
+            const wasActive = target.classList.contains('active');
+
+            Object.values(boxes).forEach(box => box.classList.remove('active'));
+            document.querySelectorAll('.explain-btn').forEach(btn => btn.classList.remove('is-selected'));
+
+            if (!wasActive) {
+                target.classList.add('active');
+                if (button) button.classList.add('is-selected');
+            }
+        }
+    </script>
+</body>
+</html>

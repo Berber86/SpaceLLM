@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Forge — Сергей</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo"><a href="index.html">Сергей</a></div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Призма</a></li>
+                    <li><a href="full.html">Полная</a></li>
+                    <li><a href="manifesto.html">Манифест</a></li>
+                    <li><a href="projects.html">Проекты</a></li>
+                    <li><a href="participate.html">Участвовать</a></li>
+                    <li><a href="project1.html">Мысли</a></li>
+                    <li><a href="project2.html">Беседа</a></li>
+                    <li><a href="project3.html">Знакомства</a></li>
+                    <li><a href="project4.html">90-е</a></li>
+                    <li><a href="project5.html">Блошиный рынок</a></li>
+                    <li><a href="project_spacellm.html" class="active">Cosmic Forge</a></li>
+                </ul>
+            </nav>
+            <a class="variant-switch" href="index.html">Сменить призму</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="project-hero">
+            <div class="project-hero__copy">
+                <p class="eyebrow">ИИ игры / проект 06</p>
+                <h1>Cosmic Forge (SpaceLLM)</h1>
+                <p class="project-lead">Браузерная sci-fi игра-песочница с элементами карточных боёв, исследующая гибридную архитектуру, где алгоритмы и генеративный ИИ разделяют обязанности.</p>
+                <div class="project-actions">
+                    <a class="cta" href="https://github.com/Berber86/SpaceLLM" target="_blank" rel="noopener">Посмотреть код (GitHub)</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="project-details">
+            <article class="article">
+                <h2>Как это работает</h2>
+                <p>Современные проекты часто пытаются отдать генеративному ИИ <strong>всё</strong>: от создания лора до расчёта урона. Это приводит к развалу баланса, галлюцинациям правил и потере «веса» решений игрока (ведь ИИ всегда можно заболтать и обмануть).</p>
+                
+                <p>В Cosmic Forge реализован другой подход: <strong>Строгий Каркас + Мягкий Наполнитель</strong>.</p>
+                <ul class="summary-list" style="margin-bottom: 2rem;">
+                    <li><strong>Алгоритм (JS-движок)</strong> отвечает за то, сколько урона наносит пушка, сколько у вас топлива и шансы на попадание.</li>
+                    <li><strong>ИИ (LLM)</strong> отвечает за то, как именно ломается эта пушка при перегреве, и пишет циничный отчет бортового журнала.</li>
+                </ul>
+
+                <h2>Гипотезы и реализация</h2>
+                
+                <h3>1. Эмоциональная привязанность к Loot'у</h3>
+                <p>Вместо сухих цифр характеристик мы отдаем статы на вход LLM с промптом: <em>"Опиши этот предмет от лица циничного инженера, обоснуй его бонусы и высмей штрафы"</em>. В результате игрок получает не "Бак +10 л", а «Свинцовый пузырь», который протекает и воняет на весь корабль. Возникает эмоциональная связь.</p>
+
+                <h3>2. Контролируемый Хаос (Cause and Effect)</h3>
+                <p>В карточной боевой системе у действий есть скрытые эффекты. Нейросеть генерирует технически обоснованные описания того, как именно произошла поломка или цепная реакция. Логично, атмосферно и не ломает баланс.</p>
+
+                <h3>3. Инверсия контроля</h3>
+                <p>Все боевые расчеты происходят локально. LLM участвует только на этапе генерации колоды. Игра не лагает из-за пингов к API во время боя, баланс остается жестким, но контент ощущается живым.</p>
+
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>По вопросам доступа к исходникам или обмену опытом — пишите мне.</p>
+    </footer>
+</body>
+</html>
